@@ -33,7 +33,7 @@ class AuthController extends Controller
             'password'  => bcrypt($request->password),
             'dob' => $request->birth_date,
             'anniversary_date' => $request->anniversary_date,
-            'user_type' => 'user',
+            'user_type' => 'user', 
         ]);
         $user->sendEmailVerificationNotification();
  
