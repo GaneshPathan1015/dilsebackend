@@ -124,7 +124,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'getProfile']);
     Route::post('/profile/update', [ProfileController::class, 'updateProfile']);
     Route::post('/reset-password-auth', [AuthController::class, 'resetPassword']);
-    
+
     // Address routes
     Route::get('/address', [AddressController::class, 'getAddress']);
     Route::get('/addresses', [AddressController::class, 'getUserAddresses']);
@@ -136,7 +136,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-orders', [OrderController::class, 'index']);
     Route::post('/cancel-order/{id}', [OrderController::class, 'cancel']);
     Route::get('/order-cancellation-info/{id}', [OrderController::class, 'getCancellationInfo']);
-    
+
     // Admin order management routes (optional - for testing)
     Route::post('/mark-delivered/{id}', [OrderController::class, 'markDelivered']);
     Route::post('/mark-shipped/{id}', [OrderController::class, 'markShipped']);

@@ -291,10 +291,17 @@ class OrderController extends Controller
             // Generate PDF with processedItems
             $pdf = Pdf::loadView('admin.DiamondMaster.Orders.invoice', compact('order', 'processedItems'));
 
-            // Store PDF on S3
+            // // Store PDF on S3
+            // $pdfPath = 'invoices/' . $order->order_id . '.pdf';
+            // Storage::disk('s3')->put($pdfPath, $pdf->output());
+            // $pdfUrl = Storage::disk('s3')->url($pdfPath);
+            // Store PDF locally
             $pdfPath = 'invoices/' . $order->order_id . '.pdf';
-            Storage::disk('s3')->put($pdfPath, $pdf->output());
-            $pdfUrl = Storage::disk('s3')->url($pdfPath);
+            Storage::disk('local')->put($pdfPath, $pdf->output());
+
+            // Local download URL
+            $pdfUrl = url('storage/' . $pdfPath);
+
 
             // Send email
             Mail::send('admin.DiamondMaster.emails.email_template_invoice', [
@@ -630,6 +637,155 @@ class OrderController extends Controller
         ]);
     }
 
+    // public function store(Request $request)
+    // {
+    //     $data = $request->validate([
+    //         'user_id' => 'required|exists:users,id',
+    //         'user_name' => 'required|string',
+    //         'contact_number' => 'required|string',
+    //         'items' => 'required|array',
+    //         'items.*.id' => 'required',
+    //         'items.*.type' => 'required|in:diamond,jewelry,combo',
+    //         'items.*.quantity' => 'required|integer|min:1',
+    //         'items.*.price' => 'required|numeric|min:0',
+    //         'total_price' => 'required|numeric',
+    //         'shipping_cost' => 'nullable|numeric',
+    //         'coupon_code' => 'nullable|string',
+    //         'coupon_discount' => 'nullable|numeric',
+    //         'address' => 'required|array',
+    //         'billing_address' => 'nullable|array',
+    //         'payment_mode' => 'required|in:cod,card,upi,netbanking,paypal',
+    //         'transaction_id' => 'nullable|string',
+    //     ]);
+
+    //     // Process items
+    //     $processedItems = [];
+    //     $itemIds = [];
+    //     $hasDiamond = false;
+    //     $hasJewelry = false;
+    //     $totalQuantity = 0;
+    //     $originalSubtotal = 0; // Original subtotal calculate करें
+
+    //     foreach ($request->items as $item) {
+    //         $processedItem = [
+    //             'type' => $item['type'],
+    //             'id' => $item['id'],
+    //             'name' => $item['name'] ?? 'Product',
+    //             'quantity' => $item['quantity'],
+    //             'price' => $item['price'],
+    //         ];
+
+    //         if ($item['type'] === 'diamond') {
+    //             $hasDiamond = true;
+    //             $processedItem['certificate_number'] = $item['certificate_number'] ?? null;
+    //             $processedItem['carat_weight'] = $item['carat_weight'] ?? null;
+    //             $processedItem['color'] = $item['color'] ?? null;
+    //             $processedItem['clarity'] = $item['clarity'] ?? null;
+    //             $processedItem['shape'] = $item['shape'] ?? null;
+    //             $itemIds[] = $item['id'];
+    //         } elseif ($item['type'] === 'jewelry') {
+    //             $hasJewelry = true;
+    //             $processedItem['metal_type'] = $item['metal_type'] ?? null;
+    //             $processedItem['metal_color'] = $item['metal_color'] ?? null;
+    //             $processedItem['metal_purity'] = $item['metal_purity'] ?? null;
+    //             $processedItem['size'] = $item['size'] ?? null;
+    //             $itemIds[] = $item['id'];
+    //         } else {
+    //             // Combo
+    //             $hasDiamond = true;
+    //             $hasJewelry = true;
+    //             $processedItem['size'] = $item['size'] ?? null;
+    //             $processedItem['metal_type'] = $item['metal_type'] ?? null;
+    //             $itemIds[] = $item['id'];
+    //         }
+
+    //         $totalQuantity += $item['quantity'];
+    //         $originalSubtotal += $item['price'] * $item['quantity'];
+    //         $processedItems[] = $processedItem;
+    //     }
+
+    //     $coupon = null;
+    //     if (!empty($data['coupon_code'])) {
+    //         $coupon = \App\Models\Coupon::where('code', $data['coupon_code'])->first();
+
+    //         if ($coupon) {
+    //             // Check if coupon is valid
+    //             if (!$coupon->isValid()) {
+    //                 return response()->json([
+    //                     'success' => false,
+    //                     'message' => 'Coupon is invalid or expired.'
+    //                 ], 400);
+    //             }
+
+    //             // Check minimum cart value
+    //             if ($coupon->min_cart_value && $originalSubtotal < $coupon->min_cart_value) {
+    //                 return response()->json([
+    //                     'success' => false,
+    //                     'message' => "Cart total must be at least ₹{$coupon->min_cart_value} to use this coupon."
+    //                 ], 400);
+    //             }
+
+    //             // ✅ COUPON USED COUNT INCREMENT करें
+    //             \DB::transaction(function () use ($coupon) {
+    //                 $coupon->refresh();
+    //                 if ($coupon->used_count < $coupon->usage_limit) {
+    //                     $coupon->increment('used_count');
+    //                 }
+    //             });
+    //         }
+    //     }
+
+
+    //     // Determine product type
+    //     if ($hasDiamond && $hasJewelry) {
+    //         $data['product_type'] = 'mixed';
+    //     } elseif ($hasDiamond) {
+    //         $data['product_type'] = 'diamond';
+    //     } elseif ($hasJewelry) {
+    //         $data['product_type'] = 'jewelry';
+    //     } else {
+    //         $data['product_type'] = 'combo';
+    //     }
+
+    //     $data['items_id'] = $itemIds;
+    //     $data['item_details'] = $processedItems;
+    //     $data['order_id'] = 'ORD-' . now()->format('YmdHis') . '-' . Str::random(6);
+    //     $data['total_quantity'] = $totalQuantity;
+    //     $data['payment_status'] = $data['payment_mode'] === 'cod' ? 'pending' : 'paid';
+    //     $data['order_status'] = 'confirmed';
+    //     $data['discount'] = 0;
+
+    //     if (empty($data['billing_address'])) {
+    //         $data['billing_address'] = $data['address'];
+    //     }
+
+    //     // Save order
+    //     try {
+    //         $order = Order::create($data);
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Order created successfully',
+    //             'order_id' => $data['order_id']
+    //         ]);
+    //     } catch (\Exception $e) {
+
+    //         if ($coupon) {
+    //             \DB::transaction(function () use ($coupon) {
+    //                 $coupon->refresh();
+    //                 if ($coupon->used_count > 0) {
+    //                     $coupon->decrement('used_count');
+    //                 }
+    //             });
+    //         }
+
+    //         Log::error('Error creating order: ' . $e->getMessage());
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error creating order: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -657,7 +813,7 @@ class OrderController extends Controller
         $hasDiamond = false;
         $hasJewelry = false;
         $totalQuantity = 0;
-        $originalSubtotal = 0; // Original subtotal calculate करें
+        $originalSubtotal = 0;
 
         foreach ($request->items as $item) {
             $processedItem = [
@@ -719,7 +875,7 @@ class OrderController extends Controller
                 }
 
                 // ✅ COUPON USED COUNT INCREMENT करें
-                \DB::transaction(function () use ($coupon) {
+                DB::transaction(function () use ($coupon) {
                     $coupon->refresh();
                     if ($coupon->used_count < $coupon->usage_limit) {
                         $coupon->increment('used_count');
@@ -727,7 +883,6 @@ class OrderController extends Controller
                 });
             }
         }
-
 
         // Determine product type
         if ($hasDiamond && $hasJewelry) {
@@ -756,15 +911,22 @@ class OrderController extends Controller
         try {
             $order = Order::create($data);
 
+            // ✅ SEND ORDER CONFIRMATION EMAIL AUTOMATICALLY
+            try {
+                $this->sendOrderConfirmationEmail($order);
+            } catch (\Exception $emailException) {
+                // Log email error but don't fail the order creation
+                Log::error('Failed to send order confirmation email: ' . $emailException->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Order created successfully',
                 'order_id' => $data['order_id']
             ]);
         } catch (\Exception $e) {
-            
             if ($coupon) {
-                \DB::transaction(function () use ($coupon) {
+                DB::transaction(function () use ($coupon) {
                     $coupon->refresh();
                     if ($coupon->used_count > 0) {
                         $coupon->decrement('used_count');
@@ -777,6 +939,71 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => 'Error creating order: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+
+    private function sendOrderConfirmationEmail(Order $order)
+    {
+        try {
+            $userEmail = $order->user->email ?? null;
+
+            // If user email is not found, try to get from address
+            if (!$userEmail && isset($order->address['email'])) {
+                $userEmail = $order->address['email'];
+            }
+
+            if (!$userEmail) {
+                Log::warning("No email found for order {$order->order_id}");
+                return false;
+            }
+
+            // Process items for PDF
+            $processedItems = $this->processItemsForOrder($order);
+
+            // Generate PDF invoice
+            $pdf = Pdf::loadView('admin.DiamondMaster.Orders.invoice', compact('order', 'processedItems'));
+
+            // // Store PDF on S3
+            // $pdfPath = 'invoices/' . $order->order_id . '.pdf';
+            // Storage::disk('s3')->put($pdfPath, $pdf->output());
+            // $pdfUrl = Storage::disk('s3')->url($pdfPath);
+            // Store PDF locally
+            $pdfPath = 'invoices/' . $order->order_id . '.pdf';
+            Storage::disk('local')->put($pdfPath, $pdf->output());
+
+            // Local download URL (optional)
+            $pdfUrl = url('storage/' . $pdfPath);
+
+            // Send order confirmation email
+            Mail::send('admin.DiamondMaster.emails.order_confirmation', [
+                'order' => $order,
+                'processedItems' => $processedItems,
+                'downloadUrl' => $pdfUrl
+            ], function ($message) use ($order, $userEmail, $pdf) {
+                $message->to($userEmail)
+                    ->subject("Order Confirmation - {$order->order_id} - The Carat Casa")
+                    ->attachData($pdf->output(), "Order-Confirmation-{$order->order_id}.pdf");
+            });
+
+            // Also send to admin for notification
+            $adminEmail = config('mail.from.address');
+            if ($adminEmail) {
+                Mail::send('admin.DiamondMaster.emails.admin_order_notification', [
+                    'order' => $order,
+                    'processedItems' => $processedItems,
+                ], function ($message) use ($order, $adminEmail) {
+                    $message->to($adminEmail)
+                        ->subject("New Order Received - {$order->order_id} - The Carat Casa");
+                });
+            }
+
+            Log::info("Order confirmation email sent for order {$order->order_id} to {$userEmail}");
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Order confirmation email sending error: ' . $e->getMessage());
+            Log::error('Email error trace: ' . $e->getTraceAsString());
+            return false;
         }
     }
 

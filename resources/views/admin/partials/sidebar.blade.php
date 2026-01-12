@@ -9,7 +9,7 @@
     <div class="app-brand demo">
         <a href="index.html" class="app-brand-link">
             <span class="app-brand-logo demo">
-                <img src="{{ asset('api/assets/img/admin/logo-black.png') }}" alt="Logo" width="200">
+                <img src="{{ asset('assets/img/admin/logo-black.png') }}" alt="Logo" width="200">
             </span>
         </a>
         <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none">
