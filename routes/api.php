@@ -162,3 +162,67 @@ Route::post('/reviews/{reviewId}/like', [ReviewLikeController::class, 'toggleLik
 Route::get('/reviews/{reviewId}/reaction', [ReviewLikeController::class, 'getUserReaction']);
 Route::post('/reviews/{reviewId}/share', [ReviewShareController::class, 'share']);
 Route::get('/reviews/{reviewId}/share-stats', [ReviewShareController::class, 'getShareStats']);
+
+
+
+// Email Testing Routes
+Route::prefix('email')->group(function () {
+    Route::get('/test-system', [OrderController::class, 'testEmailSystem']);
+    Route::get('/check-config', [OrderController::class, 'checkEmailConfig']);
+});
+
+// Manual Test Route
+Route::get('/create-and-send-email', function() {
+    try {
+        // Create test order
+        $order = \App\Models\Order::create([
+            'order_id' => 'TCC-MANUAL-' . date('YmdHis'),
+            'user_id' => 1,
+            'user_name' => 'Manual Test Customer',
+            'contact_number' => '9876543210',
+            'item_details' => json_encode(['items' => [
+                ['name' => 'Manual Test Product', 'price' => 5000, 'quantity' => 1]
+            ]]),
+            'total_price' => 5000,
+            'address' => json_encode([
+                'address_line1' => '123 Test Street',
+                'city' => 'Mumbai',
+                'state' => 'MH',
+                'pincode' => '400001',
+                'email' => 'testcustomer@example.com'
+            ]),
+            'order_status' => 'pending',
+            'payment_mode' => 'cod',
+            'payment_status' => 'pending',
+            'product_type' => 'jewelry',
+            'total_quantity' => 1,
+            'items_id' => json_encode([]),
+            'quantities' => json_encode(['total' => 1])
+        ]);
+
+        // Send emails
+        $controller = new \App\Http\Controllers\Api\OrderController();
+        
+        // Use Reflection to call private method
+        $reflection = new \ReflectionClass($controller);
+        $method = $reflection->getMethod('sendOrderEmailsImmediately');
+        $method->setAccessible(true);
+        $result = $method->invoke($controller, $order);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Manual test completed',
+            'order_created' => true,
+            'order_id' => $order->order_id,
+            'emails_sent' => $result,
+            'logs_check' => 'Check storage/logs/laravel.log for details'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Manual test failed: ' . $e->getMessage(),
+            'trace' => env('APP_DEBUG') ? $e->getTraceAsString() : null
+        ], 500);
+    }
+});

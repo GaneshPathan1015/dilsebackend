@@ -10,6 +10,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use App\Models\Coupon;
 use Illuminate\Support\Facades\Log;
+use App\Models\User;
+use Illuminate\Support\Facades\Mail;
+
 
 
 class OrderController extends Controller
@@ -28,221 +31,221 @@ class OrderController extends Controller
         return response()->json($orders);
     }
 
-    public function store(Request $request)
-    {
-        // Custom validator with quantity validation
-        $validator = Validator::make($request->all(), [
-            'user_id'        => 'required|exists:users,id',
-            'user_name'      => 'required|string',
-            'contact_number' => 'required|string',
-            'item_details'   => 'required|json',
-            'total_price'    => 'required|numeric',
-            'address'        => 'required|json',
-            'billing_address' => 'nullable|json',
-            'order_status'   => 'required|string',
-            'payment_mode'   => 'required|string',
-            'payment_status' => 'required|string',
-            'transaction_id' => 'nullable|string',
-            'razorpay_payment_id' => 'nullable|string',
-            'razorpay_order_id' => 'nullable|string',
-            'paypal_order_id' => 'nullable|string',
-            'payer_email'    => 'nullable|email',
-            'is_gift'        => 'nullable|boolean',
-            'notes'          => 'nullable|string',
-            'coupon_discount' => 'nullable|numeric',
-            'coupon_code'    => 'nullable|string',
-        ]);
+    // public function store(Request $request)
+    // {
+    //     // Custom validator with quantity validation
+    //     $validator = Validator::make($request->all(), [
+    //         'user_id'        => 'required|exists:users,id',
+    //         'user_name'      => 'required|string',
+    //         'contact_number' => 'required|string',
+    //         'item_details'   => 'required|json',
+    //         'total_price'    => 'required|numeric',
+    //         'address'        => 'required|json',
+    //         'billing_address' => 'nullable|json',
+    //         'order_status'   => 'required|string',
+    //         'payment_mode'   => 'required|string',
+    //         'payment_status' => 'required|string',
+    //         'transaction_id' => 'nullable|string',
+    //         'razorpay_payment_id' => 'nullable|string',
+    //         'razorpay_order_id' => 'nullable|string',
+    //         'paypal_order_id' => 'nullable|string',
+    //         'payer_email'    => 'nullable|email',
+    //         'is_gift'        => 'nullable|boolean',
+    //         'notes'          => 'nullable|string',
+    //         'coupon_discount' => 'nullable|numeric',
+    //         'coupon_code'    => 'nullable|string',
+    //     ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'Validation failed',
+    //             'errors' => $validator->errors()
+    //         ], 422);
+    //     }
 
-        $validated = $validator->validated();
-        $validated['order_id'] = 'ORD-' . Str::uuid();
+    //     $validated = $validator->validated();
+    //     $validated['order_id'] = 'ORD-' . Str::uuid();
 
-        // ✅ COUPON VALIDATION (IMPORTANT)
-        if (!empty($validated['coupon_code'])) {
-            $itemDetails = json_decode($validated['item_details'], true);
-            $items = $itemDetails['items'] ?? [];
-            $cartTotalWithoutDiscount = 0;
+    //     // ✅ COUPON VALIDATION (IMPORTANT)
+    //     if (!empty($validated['coupon_code'])) {
+    //         $itemDetails = json_decode($validated['item_details'], true);
+    //         $items = $itemDetails['items'] ?? [];
+    //         $cartTotalWithoutDiscount = 0;
 
-            foreach ($items as $item) {
-                $quantity = $item['quantity'] ?? $item['itemQuantity'] ?? 1;
-                $price = $item['price'] ?? 0;
-                $cartTotalWithoutDiscount += ($price * $quantity);
-            }
+    //         foreach ($items as $item) {
+    //             $quantity = $item['quantity'] ?? $item['itemQuantity'] ?? 1;
+    //             $price = $item['price'] ?? 0;
+    //             $cartTotalWithoutDiscount += ($price * $quantity);
+    //         }
 
-            $couponValidation = Order::validateCoupon($validated['coupon_code'], $cartTotalWithoutDiscount);
+    //         $couponValidation = Order::validateCoupon($validated['coupon_code'], $cartTotalWithoutDiscount);
 
-            if (!$couponValidation['valid']) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => $couponValidation['message']
-                ], 400);
-            }
+    //         if (!$couponValidation['valid']) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => $couponValidation['message']
+    //             ], 400);
+    //         }
 
-            $coupon = $couponValidation['coupon'];
-            $calculatedDiscount = $coupon->calculateDiscount($cartTotalWithoutDiscount);
+    //         $coupon = $couponValidation['coupon'];
+    //         $calculatedDiscount = $coupon->calculateDiscount($cartTotalWithoutDiscount);
 
-            if (abs($calculatedDiscount - $validated['coupon_discount']) > 0.01) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Coupon discount mismatch. Please try again.'
-                ], 400);
-            }
-        }
+    //         if (abs($calculatedDiscount - $validated['coupon_discount']) > 0.01) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Coupon discount mismatch. Please try again.'
+    //             ], 400);
+    //         }
+    //     }
 
 
-        // Parse the payload
-        $itemDetails = json_decode($validated['item_details'], true);
-        $payload = $itemDetails['items'] ?? [];
+    //     // Parse the payload
+    //     $itemDetails = json_decode($validated['item_details'], true);
+    //     $payload = $itemDetails['items'] ?? [];
 
-        // Initialize arrays for items_id and quantities
-        $itemsId = [
-            'diamond' => [],
-            'jewelry' => [],
-            'gift'    => [],
-            'build'   => [],
-            'combo'   => [],
-        ];
+    //     // Initialize arrays for items_id and quantities
+    //     $itemsId = [
+    //         'diamond' => [],
+    //         'jewelry' => [],
+    //         'gift'    => [],
+    //         'build'   => [],
+    //         'combo'   => [],
+    //     ];
 
-        $quantities = [
-            'diamond' => 0,
-            'jewelry' => 0,
-            'gift'    => 0,
-            'build'   => 0,
-            'combo'   => 0,
-            'total'   => 0
-        ];
+    //     $quantities = [
+    //         'diamond' => 0,
+    //         'jewelry' => 0,
+    //         'gift'    => 0,
+    //         'build'   => 0,
+    //         'combo'   => 0,
+    //         'total'   => 0
+    //     ];
 
-        // Process each item in the payload
-        foreach ($payload as $item) {
-            $quantity = $item['quantity'] ?? $item['itemQuantity'] ?? 1;
+    //     // Process each item in the payload
+    //     foreach ($payload as $item) {
+    //         $quantity = $item['quantity'] ?? $item['itemQuantity'] ?? 1;
 
-            switch ($item['productType'] ?? null) {
-                case 'diamond':
-                    if (!empty($item['diamondid'])) {
-                        $itemsId['diamond'][] = [
-                            'id' => $item['diamondid'],
-                            'quantity' => $quantity,
-                            'price' => $item['price'] ?? 0,
-                            'carat' => $item['carat'] ?? null,
-                            'shape' => $item['shape'] ?? null
-                        ];
-                        $quantities['diamond'] += $quantity;
-                    }
-                    break;
+    //         switch ($item['productType'] ?? null) {
+    //             case 'diamond':
+    //                 if (!empty($item['diamondid'])) {
+    //                     $itemsId['diamond'][] = [
+    //                         'id' => $item['diamondid'],
+    //                         'quantity' => $quantity,
+    //                         'price' => $item['price'] ?? 0,
+    //                         'carat' => $item['carat'] ?? null,
+    //                         'shape' => $item['shape'] ?? null
+    //                     ];
+    //                     $quantities['diamond'] += $quantity;
+    //                 }
+    //                 break;
 
-                case 'jewelry':
-                    if (!empty($item['id'])) {
-                        $itemsId['jewelry'][] = [
-                            'id' => $item['id'],
-                            'quantity' => $quantity,
-                            'price' => $item['price'] ?? 0,
-                            'title' => $item['title'] ?? '',
-                            'type' => $item['type'] ?? ''
-                        ];
-                        $quantities['jewelry'] += $quantity;
-                    }
-                    break;
+    //             case 'jewelry':
+    //                 if (!empty($item['id'])) {
+    //                     $itemsId['jewelry'][] = [
+    //                         'id' => $item['id'],
+    //                         'quantity' => $quantity,
+    //                         'price' => $item['price'] ?? 0,
+    //                         'title' => $item['title'] ?? '',
+    //                         'type' => $item['type'] ?? ''
+    //                     ];
+    //                     $quantities['jewelry'] += $quantity;
+    //                 }
+    //                 break;
 
-                case 'gift':
-                    if (!empty($item['id'])) {
-                        $itemsId['gift'][] = [
-                            'id' => $item['id'],
-                            'quantity' => $quantity,
-                            'price' => $item['price'] ?? 0,
-                            'title' => $item['name'] ?? '',
-                            'type' => $item['productType'] ?? ''
-                        ];
-                        $quantities['gift'] += $quantity;
-                    }
-                    break;
+    //             case 'gift':
+    //                 if (!empty($item['id'])) {
+    //                     $itemsId['gift'][] = [
+    //                         'id' => $item['id'],
+    //                         'quantity' => $quantity,
+    //                         'price' => $item['price'] ?? 0,
+    //                         'title' => $item['name'] ?? '',
+    //                         'type' => $item['productType'] ?? ''
+    //                     ];
+    //                     $quantities['gift'] += $quantity;
+    //                 }
+    //                 break;
 
-                case 'build':
-                    if (!empty($item['id'])) {
-                        $itemsId['build'][] = [
-                            'id'   => $item['id'],
-                            'size' => $item['size'] ?? null,
-                            'quantity' => $quantity,
-                            'price' => $item['price'] ?? 0,
-                            'specifications' => $item['specifications'] ?? []
-                        ];
-                        $quantities['build'] += $quantity;
-                    }
-                    break;
+    //             case 'build':
+    //                 if (!empty($item['id'])) {
+    //                     $itemsId['build'][] = [
+    //                         'id'   => $item['id'],
+    //                         'size' => $item['size'] ?? null,
+    //                         'quantity' => $quantity,
+    //                         'price' => $item['price'] ?? 0,
+    //                         'specifications' => $item['specifications'] ?? []
+    //                     ];
+    //                     $quantities['build'] += $quantity;
+    //                 }
+    //                 break;
 
-                case 'combo':
-                    $itemsId['combo'][] = [
-                        'diamond_id' => $item['diamond']['diamondid'] ?? null,
-                        'product_id' => $item['ring']['id'] ?? null,
-                        'size'       => $item['size'] ?? null,
-                        'quantity'   => $quantity,
-                        'price'      => $item['price'] ?? 0,
-                        'diamond_details' => $item['diamond'] ?? [],
-                        'ring_details' => $item['ring'] ?? []
-                    ];
-                    $quantities['combo'] += $quantity;
-                    break;
-            }
+    //             case 'combo':
+    //                 $itemsId['combo'][] = [
+    //                     'diamond_id' => $item['diamond']['diamondid'] ?? null,
+    //                     'product_id' => $item['ring']['id'] ?? null,
+    //                     'size'       => $item['size'] ?? null,
+    //                     'quantity'   => $quantity,
+    //                     'price'      => $item['price'] ?? 0,
+    //                     'diamond_details' => $item['diamond'] ?? [],
+    //                     'ring_details' => $item['ring'] ?? []
+    //                 ];
+    //                 $quantities['combo'] += $quantity;
+    //                 break;
+    //         }
 
-            $quantities['total'] += $quantity;
-        }
+    //         $quantities['total'] += $quantity;
+    //     }
 
-        // Calculate total quantities
-        $validated['total_quantity'] = $quantities['total'];
-        $validated['quantities'] = $quantities;
+    //     // Calculate total quantities
+    //     $validated['total_quantity'] = $quantities['total'];
+    //     $validated['quantities'] = $quantities;
 
-        // Decide product type for DB
-        $nonEmptyTypes = collect($itemsId)->filter(fn($ids) => !empty($ids))->keys();
+    //     // Decide product type for DB
+    //     $nonEmptyTypes = collect($itemsId)->filter(fn($ids) => !empty($ids))->keys();
 
-        if ($nonEmptyTypes->isEmpty()) {
-            $productType = 'empty';
-        } elseif ($nonEmptyTypes->count() === 1) {
-            $productType = $nonEmptyTypes->first();
-        } else {
-            $productType = 'multiple';
-        }
+    //     if ($nonEmptyTypes->isEmpty()) {
+    //         $productType = 'empty';
+    //     } elseif ($nonEmptyTypes->count() === 1) {
+    //         $productType = $nonEmptyTypes->first();
+    //     } else {
+    //         $productType = 'multiple';
+    //     }
 
-        // Add both product type and items_id into validated array
-        $validated['items_id'] = $itemsId;
-        $validated['product_type'] = $productType;
+    //     // Add both product type and items_id into validated array
+    //     $validated['items_id'] = $itemsId;
+    //     $validated['product_type'] = $productType;
 
-        // If billing address is not provided, use shipping address
-        if (empty($validated['billing_address']) && !empty($validated['address'])) {
-            $validated['billing_address'] = $validated['address'];
-        }
+    //     // If billing address is not provided, use shipping address
+    //     if (empty($validated['billing_address']) && !empty($validated['address'])) {
+    //         $validated['billing_address'] = $validated['address'];
+    //     }
 
-        try {
-            // ✅ DB TRANSACTION USE करें
-            DB::beginTransaction();
+    //     try {
+    //         // ✅ DB TRANSACTION USE करें
+    //         DB::beginTransaction();
 
-            $order = Order::create($validated);
+    //         $order = Order::create($validated);
 
-            // ✅ Order create होने के बाद Model event automatically coupon count increment कर देगा
-            DB::commit();
+    //         // ✅ Order create होने के बाद Model event automatically coupon count increment कर देगा
+    //         DB::commit();
 
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Order created successfully',
-                'order' => $order,
-                'quantities' => $quantities
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error("Order creation failed: " . $e->getMessage());
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'message' => 'Order created successfully',
+    //             'order' => $order,
+    //             'quantities' => $quantities
+    //         ], 201);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         \Log::error("Order creation failed: " . $e->getMessage());
 
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to save order',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'Failed to save order',
+    //             'error' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
 
     public function show($id)
     {
@@ -598,5 +601,395 @@ class OrderController extends Controller
         }
 
         return response()->json($summary);
+    }
+
+    public function store(Request $request)
+    {
+        Log::info('🔄 ======= API ORDER CREATION STARTED =======');
+        Log::info('📝 Request Data:', $request->all());
+
+        try {
+            // Step 1: Validate Request
+            $validator = Validator::make($request->all(), [
+                'user_id'        => 'required|exists:users,id',
+                'user_name'      => 'required|string|max:255',
+                'contact_number' => 'required|string|max:20',
+                'item_details'   => 'required|json',
+                'total_price'    => 'required|numeric|min:0',
+                'address'        => 'required|json',
+                'billing_address' => 'nullable|json',
+                'order_status'   => 'required|string|in:pending,processing,confirmed',
+                'payment_mode'   => 'required|string|in:cod,online,card,wallet',
+                'payment_status' => 'required|string|in:pending,paid,failed',
+                'transaction_id' => 'nullable|string',
+                'razorpay_payment_id' => 'nullable|string',
+                'razorpay_order_id' => 'nullable|string',
+                'is_gift'        => 'nullable|boolean',
+                'notes'          => 'nullable|string|max:500',
+                'coupon_discount' => 'nullable|numeric|min:0',
+                'coupon_code'    => 'nullable|string|max:50',
+                'product_type'   => 'required|string',
+                'total_quantity' => 'required|integer|min:1'
+            ]);
+
+            if ($validator->fails()) {
+                Log::error('❌ Validation failed:', $validator->errors()->toArray());
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $validated = $validator->validated();
+
+            // Generate unique Order ID
+            $validated['order_id'] = 'TCC' . date('YmdHis') . strtoupper(Str::random(4));
+
+            // Set default values
+            if (empty($validated['billing_address'])) {
+                $validated['billing_address'] = $validated['address'];
+            }
+
+            // Set items_id and quantities (can be empty arrays)
+            $validated['items_id'] = json_encode([]);
+            $validated['quantities'] = json_encode(['total' => $validated['total_quantity']]);
+
+            Log::info('✅ Validation passed, preparing order data...');
+            Log::info('📦 Order ID generated: ' . $validated['order_id']);
+
+            // ✅ IMPORTANT: CREATE ORDER WITHOUT DB TRANSACTION FIRST
+            $order = Order::create($validated);
+
+            Log::info('🎉 Order created successfully in database: ' . $order->id);
+            Log::info('📊 Order Details:', [
+                'order_id' => $order->order_id,
+                'user_id' => $order->user_id,
+                'total_price' => $order->total_price,
+                'payment_mode' => $order->payment_mode
+            ]);
+
+            // ✅ NOW SEND EMAILS AFTER SUCCESSFUL ORDER CREATION
+            $emailResult = $this->sendOrderEmailsImmediately($order);
+
+            Log::info('📧 Email sending result: ' . ($emailResult ? 'SUCCESS' : 'FAILED'));
+            Log::info('✅ ======= ORDER CREATION COMPLETED =======');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Order created successfully!',
+                'order_id' => $order->order_id,
+                'order' => $order,
+                'email_sent' => $emailResult
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('❌ ORDER CREATION FAILED: ' . $e->getMessage());
+            Log::error('🔍 Error Trace: ' . $e->getTraceAsString());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to create order',
+                'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
+            ], 500);
+        }
+    }
+
+    private function sendOrderEmailsImmediately(Order $order)
+    {
+        Log::info('📧 ======= SENDING ORDER EMAILS STARTED =======');
+
+        try {
+
+            $customerEmail = $this->getCustomerEmail($order);
+
+            $adminEmail = $this->getAdminEmail();
+
+            Log::info('👤 Customer Email: ' . ($customerEmail ?? 'NOT FOUND'));
+            Log::info('👨‍💼 Admin Email: ' . $adminEmail);
+
+            $emailSentCount = 0;
+
+            if ($adminEmail) {
+                $adminSent = $this->sendSingleEmail(
+                    $adminEmail,
+                    'admin.DiamondMaster.emails.order_notification',
+                    '🆕 New Order Recive - ' . $order->order_id . ' - The Carat Casa',
+                    $order,
+                    'admin'
+                );
+
+                if ($adminSent) {
+                    $emailSentCount++;
+                    Log::info('✅ Admin email sent successfully');
+                }
+            }
+
+            if ($customerEmail) {
+                $customerSent = $this->sendSingleEmail(
+                    $customerEmail,
+                    'admin.DiamondMaster.emails.order_confirmation',
+                    '✅ Your Confirm Order - #' . $order->order_id . ' - The Carat Casa',
+                    $order,
+                    'customer'
+                );
+
+                if ($customerSent) {
+                    $emailSentCount++;
+                    Log::info('✅ Customer email sent successfully');
+                }
+            }
+
+            Log::info('📧 Total emails sent: ' . $emailSentCount);
+            Log::info('✅ ======= EMAIL SENDING COMPLETED =======');
+
+            return $emailSentCount > 0;
+        } catch (\Exception $e) {
+            Log::error('❌ Email sending failed: ' . $e->getMessage());
+            Log::error('🔍 Email Error Trace: ' . $e->getTraceAsString());
+            return false;
+        }
+    }
+
+    private function sendSingleEmail($toEmail, $view, $subject, $order, $type)
+    {
+        try {
+            // Prepare email data
+            $emailData = $this->prepareEmailData($order, $type);
+
+            // Send email
+            Mail::send($view, $emailData, function ($message) use ($toEmail, $subject, $order, $type) {
+                $message->to($toEmail)
+                    ->subject($subject);
+
+                if ($type === 'admin') {
+                    $message->cc(env('SALES_EMAIL', 'sales@thecaratcasa.com'));
+                }
+            });
+
+            // Check for failures
+            if (Mail::failures()) {
+                Log::warning('⚠️ Mail failures for ' . $type . ' email: ' . json_encode(Mail::failures()));
+                return false;
+            }
+
+            Log::info('📨 ' . ucfirst($type) . ' email sent to: ' . $toEmail);
+            return true;
+        } catch (\Exception $e) {
+            Log::error('❌ Error sending ' . $type . ' email: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function getCustomerEmail(Order $order)
+    {
+        try {
+            $user = User::find($order->user_id);
+            if ($user && !empty($user->email)) {
+                Log::info('👤 Found customer email in users table: ' . $user->email);
+                return $user->email;
+            }
+
+            if ($order->address) {
+                $address = json_decode($order->address, true);
+                if (is_array($address) && isset($address['email']) && !empty($address['email'])) {
+                    Log::info('📭 Found customer email in address: ' . $address['email']);
+                    return $address['email'];
+                }
+            }
+
+            $contact = $order->contact_number ?? '';
+            if (!empty($contact) && strlen($contact) >= 10) {
+                $fallbackEmail = 'customer' . substr($contact, -10) . '@thecaratcasa.com';
+                Log::info('📞 Created fallback email: ' . $fallbackEmail);
+                return $fallbackEmail;
+            }
+
+            Log::warning('⚠️ No customer email found for order: ' . $order->order_id);
+            return null;
+        } catch (\Exception $e) {
+            Log::error('❌ Error getting customer email: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function getAdminEmail()
+    {
+        // Priority: ADMIN_EMAIL → MAIL_FROM_ADDRESS → default
+        $adminEmail = env('ADMIN_EMAIL', env('MAIL_FROM_ADDRESS', 'admin@thecaratcasa.com'));
+
+        // Validate email
+        if (!filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+            Log::error('❌ Invalid admin email: ' . $adminEmail);
+            return 'admin@thecaratcasa.com'; // Fallback
+        }
+
+        return $adminEmail;
+    }
+
+    private function prepareEmailData(Order $order, $type = 'customer')
+    {
+        $data = [
+            'order' => $order,
+            'order_id' => $order->order_id,
+            'customer_name' => $order->user_name,
+            'customer_phone' => $order->contact_number,
+            'order_date' => $order->created_at->format('d F Y, h:i A'),
+            'total_amount' => number_format($order->total_price, 2),
+            'payment_method' => strtoupper($order->payment_mode),
+            'payment_status' => ucfirst($order->payment_status),
+            'order_status' => ucfirst($order->order_status),
+            'email_type' => $type
+        ];
+
+        if ($order->item_details) {
+            $items = json_decode($order->item_details, true);
+            $data['items'] = $items['items'] ?? [];
+
+            // Log items for debugging
+            if (!empty($data['items'])) {
+                Log::info('📦 Order items for email:', $data['items']);
+            }
+        }
+
+        if ($order->address) {
+            $address = json_decode($order->address, true);
+            $data['shipping_address'] = is_array($address) ? $address : [];
+        }
+
+        if ($order->coupon_discount > 0) {
+            $data['coupon_discount'] = number_format($order->coupon_discount, 2);
+            $data['coupon_code'] = $order->coupon_code;
+        }
+
+
+        if ($type === 'admin') {
+            $user = User::find($order->user_id);
+            $data['user'] = $user;
+            $data['user_email'] = $user->email ?? 'Not available';
+        }
+
+        return $data;
+    }
+
+    public function testEmailSystem(Request $request)
+    {
+        try {
+            Log::info('🧪 ======= EMAIL SYSTEM TEST STARTED =======');
+
+            // Get order ID from request or use latest
+            $orderId = $request->get('order_id');
+
+            if ($orderId) {
+                $order = Order::where('order_id', $orderId)->first();
+                if (!$order) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Order not found with ID: ' . $orderId
+                    ], 404);
+                }
+            } else {
+                $order = Order::latest()->first();
+                if (!$order) {
+                    // Create test order
+                    $order = Order::create([
+                        'order_id' => 'TCC-TEST-' . date('YmdHis'),
+                        'user_id' => 1,
+                        'user_name' => 'Test Customer',
+                        'contact_number' => '9876543210',
+                        'item_details' => json_encode(['items' => [
+                            ['name' => 'Gold Ring Test', 'price' => 15000, 'quantity' => 1],
+                            ['name' => 'Diamond Earrings Test', 'price' => 25000, 'quantity' => 2]
+                        ]]),
+                        'total_price' => 65000,
+                        'address' => json_encode([
+                            'address_line1' => 'Test Address',
+                            'city' => 'Mumbai',
+                            'state' => 'Maharashtra',
+                            'pincode' => '400001',
+                            'email' => 'test@example.com'
+                        ]),
+                        'order_status' => 'pending',
+                        'payment_mode' => 'cod',
+                        'payment_status' => 'pending',
+                        'product_type' => 'jewelry',
+                        'total_quantity' => 3
+                    ]);
+                    Log::info('📝 Test order created: ' . $order->order_id);
+                }
+            }
+
+            Log::info('📧 Testing email for order: ' . $order->order_id);
+
+            // Send emails
+            $result = $this->sendOrderEmailsImmediately($order);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => $result ? 'Test emails sent successfully' : 'Email sending failed',
+                'order_id' => $order->order_id,
+                'emails_sent' => $result,
+                'admin_view' => 'admin.DiamondMaster.emails.order_notification',
+                'customer_view' => 'admin.DiamondMaster.emails.order_confirmation',
+                'timestamp' => now()->format('Y-m-d H:i:s')
+            ]);
+        } catch (\Exception $e) {
+            Log::error('❌ Email test failed: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Test failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function checkEmailConfig(Request $request)
+    {
+        try {
+            Log::info('🔧 Checking email configuration...');
+
+            $config = [
+                'MAIL_MAILER' => env('MAIL_MAILER'),
+                'MAIL_HOST' => env('MAIL_HOST'),
+                'MAIL_PORT' => env('MAIL_PORT'),
+                'MAIL_USERNAME' => substr(env('MAIL_USERNAME', ''), 0, 3) . '...', // Hide full email
+                'MAIL_ENCRYPTION' => env('MAIL_ENCRYPTION'),
+                'MAIL_FROM_ADDRESS' => env('MAIL_FROM_ADDRESS'),
+                'MAIL_FROM_NAME' => env('MAIL_FROM_NAME'),
+                'ADMIN_EMAIL' => env('ADMIN_EMAIL'),
+                'APP_ENV' => env('APP_ENV'),
+                'APP_DEBUG' => env('APP_DEBUG')
+            ];
+
+            // Test email sending
+            $testEmail = 'test@example.com';
+            try {
+                Mail::raw(
+                    'Test email from The Carat Casa - ' . now()->format('Y-m-d H:i:s'),
+                    function ($message) use ($testEmail) {
+                        $message->to($testEmail)->subject('Test Email Config');
+                    }
+                );
+
+                $config['mail_test'] = 'SUCCESS';
+                Log::info('✅ Email configuration test passed');
+            } catch (\Exception $e) {
+                $config['mail_test'] = 'FAILED: ' . $e->getMessage();
+                Log::error('❌ Email configuration test failed: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Email configuration check',
+                'config' => $config,
+                'views_exist' => [
+                    'admin_notification' => view()->exists('admin.DiamondMaster.emails.order_notification'),
+                    'customer_confirmation' => view()->exists('admin.DiamondMaster.emails.order_confirmation')
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Config check failed: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
