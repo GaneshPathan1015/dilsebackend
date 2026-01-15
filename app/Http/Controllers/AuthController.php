@@ -23,9 +23,9 @@ class AuthController extends Controller
             'password'  => 'required|min:6',
             'birth_date' => 'nullable|date',
             'anniversary_date' => 'nullable|date',
-        
+
         ]);
- 
+
         $user = User::create([
             'title'     => $request->title,
             'name'      => $request->name,
@@ -36,9 +36,9 @@ class AuthController extends Controller
             'user_type' => 'user',
         ]);
         $user->sendEmailVerificationNotification();
- 
+
         $token = $user->createToken('auth_token')->plainTextToken;
- 
+
         return response()->json([
             'success'      => true,
             'message'      => 'Registration successful.',
@@ -117,15 +117,14 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Password Changed successfully.'
         ]);
-
     }
-    
+
     //Forget Password
     public function forgetPasswordView()
     {
         return view('admin.auth.forgetPassword');
     }
-    
+
     public function sendResetLink(Request $request)
     {
         $request->validate([
@@ -138,7 +137,7 @@ class AuthController extends Controller
 
         // For API/React
         if ($request->expectsJson()) {
-            
+
             if ($status === Password::RESET_LINK_SENT) {
                 return response()->json([
                     'success' => true,
@@ -155,7 +154,7 @@ class AuthController extends Controller
         // For Laravel Blade
         return back()->with('status', trans($status));
     }
-    
+
     public function reset(Request $request)
     {
         $request->validate([
@@ -271,9 +270,9 @@ class AuthController extends Controller
             $token = $user->createToken('google-login')->accessToken;
 
             // 🔁 Redirect to your frontend app with the token
-            return redirect("https://thecaratcasa.com/google/callback?token={$token}");
+            return redirect("https://dilsejewels.com/google/callback?token={$token}");
         } catch (\Exception $e) {
-            return redirect("https://thecaratcasa.com/signin?error=google_login_failed");
+            return redirect("https://dilsejewels.com/signin?error=google_login_failed");
         }
     }
-} 
+}
