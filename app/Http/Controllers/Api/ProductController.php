@@ -13,6 +13,7 @@ use App\Models\MetalType;
 use App\Models\DiamondShape;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Review;
 
 class ProductController extends Controller
 {
@@ -251,7 +252,7 @@ class ProductController extends Controller
         ]);
     }
 
-    public function showBuildProductById ($id)
+    public function showBuildProductById($id)
     {
         $product = Product::with([
             'productcategory' => function ($query) {
@@ -301,7 +302,7 @@ class ProductController extends Controller
                 'sku' => $variation->sku,
                 'shape_id' => $variation->shape_id,
                 'metal_color_id' => $variation->metal_color_id,
-                'diamond_quality_id' =>$variation->diamond_quality_id,
+                'diamond_quality_id' => $variation->diamond_quality_id,
                 'diamond_quality_name' => optional($variation->diamondQualityGroup)->dqg_name,
                 'metal_color' => $variation->metalColor ? [
                     'id' => $variation->metalColor->dmt_id,
@@ -317,7 +318,7 @@ class ProductController extends Controller
                 'weight' => $variation->weight,
                 'diamond_weight' => $variation->diamond_weight,
                 'images' => $variation->images,
-                'video' => $variation->video ? asset('storage/variation_videos/' . $variation->video): null,
+                'video' => $variation->video ? asset('storage/variation_videos/' . $variation->video) : null,
                 'category' => $category ? [
                     'id' => $category->category_id,
                     'name' => $category->category_name,
@@ -448,7 +449,7 @@ class ProductController extends Controller
                 SELECT MIN(psc_id) as psc_id FROM products_style_category
                 WHERE parent_category_id IS NULL GROUP BY psc_category_id
             ) as grouped_styles'), 'products_style_category.psc_id', '=', 'grouped_styles.psc_id')
-                ->select('products_style_category.*')->get();
+            ->select('products_style_category.*')->get();
 
         // Fetch Collection Data
         if (!empty($filters['subcategory']) && !empty($filters['category'])) {
@@ -542,9 +543,9 @@ class ProductController extends Controller
                 ->groupBy('product_id');
 
             $sortedProductIds = ProductVariation::joinSub($subQuery, 'sorted_prices', function ($join) {
-                    $join->on('product_variations.product_id', '=', 'sorted_prices.product_id')
-                        ->on('product_variations.price', '=', 'sorted_prices.target_price');
-                })
+                $join->on('product_variations.product_id', '=', 'sorted_prices.product_id')
+                    ->on('product_variations.price', '=', 'sorted_prices.target_price');
+            })
                 ->select('product_variations.product_id', 'sorted_prices.target_price')
                 ->orderBy('sorted_prices.target_price', $sortDirection)
                 ->skip(($page - 1) * $perPage)
@@ -556,11 +557,12 @@ class ProductController extends Controller
         $products = Product::with([
             'productcategory' => function ($q) {
                 $q->select('category_id', 'category_name', 'parent_id')->with('parent:category_id,category_name');
-            }, 
-            'variations.metalColor'])
-                ->whereIn('products_id', $sortedProductIds)
-                ->orderByRaw('FIELD(products_id, ' . implode(',', $sortedProductIds->toArray()) . ')')
-                ->get();
+            },
+            'variations.metalColor'
+        ])
+            ->whereIn('products_id', $sortedProductIds)
+            ->orderByRaw('FIELD(products_id, ' . implode(',', $sortedProductIds->toArray()) . ')')
+            ->get();
 
         $validProducts = [];
 
@@ -631,7 +633,7 @@ class ProductController extends Controller
                     'parent_category_id' => $product->parent_category_id,
                     'psc_id' => $product->psc_id,
                     'is_build' => $product->is_build_product,
-                    'product_collection_id'=> $product->product_collection_id,
+                    'product_collection_id' => $product->product_collection_id,
                 ],
                 'category' => $category ? [
                     'id' => $category->category_id,
@@ -646,7 +648,7 @@ class ProductController extends Controller
         }
 
         return response()->json([
-            'banner_video'=>$bannerVideo,
+            'banner_video' => $bannerVideo,
             'banner_image' => $bannerImage,
             'style_data' => $styleData,
             'collection_data' => $collectionData,
@@ -659,6 +661,319 @@ class ProductController extends Controller
         ]);
     }
 
+    // public function weddingData(Request $request, $slug = null)
+    // {
+    //     $filters = [
+    //         'price' => $request->input('price'),
+    //         'style' => $request->input('style'),
+    //         'collection' => $request->input('collection'),
+    //         'ready_to_ship' => $request->input('ready_to_ship'),
+    //         'sort' => $request->input('sort'),
+    //         'metal_color_id' => $request->input('metal_color_id'),
+    //         'category' => $request->input('category'),
+    //         'subcategory' => $request->input('subcategory'),
+    //         'menucollection' => $request->input('menucollection'),
+    //         'gender' => null,
+    //         'bond' => null,
+    //     ];
+
+    //     if ($slug) {
+    //         switch ($slug) {
+    //             case 'mens-wedding-rings':
+    //                 $filters['gender'] = '0'; 
+    //                 break;
+    //             case 'mens-metal-wedding-bands':
+    //                 $filters['gender'] = '0';
+    //                 $filters['bond'] = '0';
+    //                 break;
+    //             case 'mens-diamond-wedding-bands':
+    //                 $filters['gender'] = '0';
+    //                 $filters['bond'] = '1';
+    //                 break;
+    //             case 'womens-wedding-rings':
+    //                 $filters['gender'] = '1'; // only women’s rings
+    //                 break;
+    //             case 'womens-metal-wedding-rings':
+    //                 $filters['gender'] = '1';
+    //                 $filters['bond'] = '0';
+    //                 break;
+    //             case 'womens-diamond-wedding-rings':
+    //                 $filters['gender'] = '1';
+    //                 $filters['bond'] = '1';
+    //                 break;
+    //             case 'womens-anniversary-rings':
+    //                 $filters['gender'] = '1';
+
+    //                 // Lookup category id dynamically
+    //                 $category = DB::table('categories')
+    //                     ->whereRaw('LOWER(category_name) = ?', ['anniversary'])
+    //                     ->first();
+
+    //                 if ($category) {
+    //                     $filters['category'] = $category->category_id;
+    //                 }
+    //                 break;
+
+    //             case 'womens-eternity-rings':
+    //                 $filters['gender'] = '1';
+    //                 $category = DB::table('categories')
+    //                     ->whereRaw('LOWER(category_name) = ?', ['eternity'])
+    //                     ->first();
+
+    //                 if ($category) {
+    //                     $filters['category'] = $category->category_id;
+    //                 }
+    //                 break;
+
+    //         }
+    //     }
+
+    //     // Always enforce wedding products
+    //     $filters['is_build_product'] = 2;
+
+    //     if (!empty($filters['price'])) {
+    //         $filters['price'] = str_replace(['\u2013', ' '], ['-', ''], $filters['price']);
+    //     }
+
+    //     $perPage = (int) $request->input('perPage', 20);
+    //     $page = (int) $request->input('page', 1);
+
+    //     // -----------------------------
+    //     // Style Data
+    //     // -----------------------------
+    //     /* $styleData = !empty($filters['subcategory']) || !empty($filters['category'])
+    //         ? ProductStyleCategory::where('psc_category_id', $filters['subcategory'] ?? $filters['category'])->get()
+    //         : ProductStyleCategory::join(DB::raw('(
+    //             SELECT MIN(psc_id) as psc_id FROM products_style_category
+    //             WHERE parent_category_id IS NULL GROUP BY psc_category_id
+    //         ) as grouped_styles'), 'products_style_category.psc_id', '=', 'grouped_styles.psc_id')
+    //             ->select('products_style_category.*')->get();
+    //     */
+    //     // -----------------------------
+    //     // Collection Data
+    //     // -----------------------------
+    //    /*  if (!empty($filters['subcategory']) && !empty($filters['category'])) {
+    //         $collectionData = ProductCollection::where('product_category_id', $filters['subcategory'])->get();
+    //     } elseif (!empty($filters['category'])) {
+    //         $collectionData = ProductCollection::where('parent_category_id', $filters['category'])->get();
+    //     } else {
+    //         $collectionData = ProductCollection::join(DB::raw('(
+    //                 SELECT MIN(id) as id
+    //                 FROM product_collections
+    //                 WHERE parent_category_id IS NOT NULL AND product_category_id IS NULL
+    //                 GROUP BY parent_category_id
+    //             ) as grouped_collection'), 'product_collections.id', '=', 'grouped_collection.id')
+    //             ->select('product_collections.*')
+    //             ->get();
+    //     } */
+
+    //     // -----------------------------
+    //     // Metal Types sorted
+    //     // -----------------------------
+    //     $metalTypes = MetalType::all()->sort(function ($a, $b) {
+    //         $aVal = is_numeric(substr($a->dmt_tooltip, 0, 2)) ? (int) filter_var($a->dmt_tooltip, FILTER_SANITIZE_NUMBER_INT) : 999;
+    //         $bVal = is_numeric(substr($b->dmt_tooltip, 0, 2)) ? (int) filter_var($b->dmt_tooltip, FILTER_SANITIZE_NUMBER_INT) : 999;
+    //         return $aVal <=> $bVal;
+    //     })->values();
+
+    //     // -----------------------------
+    //     // Product + Variation Query (Optimized)
+    //     // -----------------------------
+    //     $sort = $filters['sort'];
+    //     $sortDirection = in_array($sort, ['price_desc', 'date_desc']) ? 'desc' : 'asc';
+    //     $priceAggFunc = $sort === 'price_desc' ? 'MAX' : 'MIN';
+
+    //     $productQuery = Product::query()
+    //         ->select('products.products_id')
+    //         ->join('product_variations', 'products.products_id', '=', 'product_variations.product_id')
+    //         ->where('products.is_build_product', 2);
+
+
+    //     // Apply gender filter if set
+    //     if (!is_null($filters['gender'])) {
+    //         $productQuery->where('products.gender', (string)$filters['gender']);
+    //     }
+
+    //     // Apply bond filter
+    //     if (!is_null($filters['bond'])) {
+    //         $productQuery->where('products.bond', $filters['bond']);
+    //     }
+
+    //     // ---- Variation Filters ----
+    //     if (!empty($filters['price']) && preg_match('/^(\d+)-(\d+)$/', $filters['price'])) {
+    //         [$min, $max] = explode('-', $filters['price']);
+    //         $productQuery->whereBetween('product_variations.price', [(int) $min, (int) $max]);
+    //     }
+    //     if (!empty($filters['metal_color_id'])) {
+    //         $productQuery->where('product_variations.metal_color_id', $filters['metal_color_id']);
+    //     }
+
+    //     // ---- Product Filters ----
+    //     if (!empty($filters['category'])) {
+    //         $productQuery->where('products.categories_id', $filters['category']);
+    //     }
+    //     // if (!empty($filters['subcategory'])) {
+    //     //     $productQuery->where('products.categories_id', $filters['subcategory']);
+    //     // } elseif (!empty($filters['category'])) {
+    //     //     $productQuery->where('products.categories_id', $filters['category']);
+    //     // }
+    //     if (!empty($filters['menucollection'])) {
+    //         $productQuery->where('products.product_collection_id', $filters['menucollection']);
+    //     }
+    //     if (!empty($filters['style'])) {
+    //         $productQuery->where('products.psc_id', $filters['style']);
+    //     }
+    //     if (!empty($filters['collection'])) {
+    //         $productQuery->where('products.product_collection_id', $filters['collection']);
+    //     }
+    //     if (!empty($filters['ready_to_ship']) && $filters['ready_to_ship'] === 'true') {
+    //         $productQuery->where('products.ready_to_ship', 1);
+    //     }
+
+    //     // ---- Sorting ----
+    //     if ($sort === 'date_asc' || $sort === 'date_desc') {
+    //         $productQuery->orderBy('products.created_at', $sortDirection);
+    //         $totalProducts = (clone $productQuery)->distinct()->count('products.products_id');
+    //         $productIds = $productQuery->distinct()
+    //             ->skip(($page - 1) * $perPage)
+    //             ->take($perPage)
+    //             ->pluck('products.products_id');
+    //     } else {
+    //         $priceQuery = ProductVariation::select('product_id', DB::raw("$priceAggFunc(price) as sort_price"))
+    //             ->whereIn('product_id', $productQuery->pluck('products.products_id'))
+    //             ->groupBy('product_id');
+
+    //         $totalProducts = $priceQuery->distinct('product_id')->count('product_id');
+
+    //         $productIds = $priceQuery
+    //             ->orderBy('sort_price', $sortDirection)
+    //             ->skip(($page - 1) * $perPage)
+    //             ->take($perPage)
+    //             ->pluck('product_id');
+    //     }
+
+    //     if ($productIds->isEmpty()) {
+    //         return response()->json([
+    //             // 'style_data' => $styleData,
+    //             // 'collection_data' => $collectionData,
+    //             'metal_types' => $metalTypes,
+    //             'data' => [],
+    //             'totalProducts' => 0,
+    //             'currentPage' => $page,
+    //             'perPage' => $perPage,
+    //             'totalPages' => 0,
+    //         ]);
+    //     }
+
+
+    //     // -----------------------------
+    //     // Fetch Products + Variations
+    //     // -----------------------------
+    //     $products = Product::with([
+    //             'productcategory.parent',
+    //             'variations.metalColor'
+    //         ])
+    //         ->whereIn('products_id', $productIds)
+    //         ->orderByRaw('FIELD(products_id, ' . implode(',', $productIds->toArray()) . ')')
+    //         ->get();
+
+    //     $validProducts = [];
+    //     foreach ($products as $product) {
+    //         $variations = $product->variations;
+
+    //         // Extra filtering inside eager-loaded variations
+    //         if (!empty($filters['metal_color_id'])) {
+    //             $hasMatchingMetal = $variations->contains('metal_color_id', $filters['metal_color_id']);
+    //             if (!$hasMatchingMetal) continue;
+    //         }
+
+    //         if (!empty($filters['price']) && preg_match('/^(\d+)-(\d+)$/', $filters['price'])) {
+    //             [$min, $max] = explode('-', $filters['price']);
+    //             $variations = $variations->filter(fn($v) => $v->price >= $min && $v->price <= $max);
+    //         }
+    //         if ($variations->isEmpty()) continue;
+
+    //         $category = $product->productcategory;
+    //         $parent = $category?->parent;
+
+    //         // Group variations by metal color
+    //         $groupedByMetal = $variations->groupBy('metal_color_id')->map(function ($group) use ($category, $parent) {
+    //             return $group->map(function ($variation) use ($category, $parent) {
+    //                 return [
+    //                     'id' => $variation->id,
+    //                     'product_id' => $variation->product_id,
+    //                     'carat' => $variation->carat,
+    //                     'price' => $variation->price,
+    //                     'original_price' => $variation->regular_price,
+    //                     'sku' => $variation->sku,
+    //                     'metal_color_id' => $variation->metal_color_id,
+    //                     'metal_color' => $variation->metalColor ? [
+    //                         'id' => $variation->metalColor->dmt_id,
+    //                         'name' => $variation->metalColor->dmt_name,
+    //                         'quality' => $variation->metalColor->dmt_tooltip,
+    //                         'hex' => $variation->metalColor->color_code ?? null,
+    //                     ] : null,
+    //                     'weight' => $variation->weight,
+    //                     'images' => $variation->images,
+    //                     'category' => $category ? [
+    //                         'id' => $category->category_id,
+    //                         'name' => $category->category_name,
+    //                         'parent' => $parent ? [
+    //                             'id' => $parent->category_id,
+    //                             'name' => $parent->category_name
+    //                         ] : null
+    //                     ] : null,
+    //                 ];
+    //             });
+    //         })->filter(fn($group) => $group->isNotEmpty());
+
+    //         // Sort metals by quality
+    //         $groupedByMetal = collect($groupedByMetal)->sortBy(function ($group) {
+    //             $quality = $group->first()['metal_color']['quality'] ?? null;
+    //             return is_numeric($quality) ? (int) $quality : PHP_INT_MAX . '_' . $quality;
+    //         });
+
+    //         $validProducts[] = [
+    //             'id' => $product->products_id,
+    //             'product' => [
+    //                 'id' => $product->products_id,
+    //                 'name' => $product->products_name,
+    //                 'master_sku' => $product->master_sku,
+    //                 'description' => $product->products_description,
+    //                 'ready_to_ship' => $product->ready_to_ship,
+    //                 'categories_id' => $product->categories_id,
+    //                 'parent_category_id' => $product->parent_category_id,
+    //                 'psc_id' => $product->psc_id,
+    //                 'is_build' => $product->is_build_product,
+    //                 'product_collection_id' => $product->product_collection_id,
+    //             ],
+    //             'category' => $category ? [
+    //                 'id' => $category->category_id,
+    //                 'name' => $category->category_name,
+    //                 'parent' => $parent ? [
+    //                     'id' => $parent->category_id,
+    //                     'name' => $parent->category_name
+    //                 ] : null
+    //             ] : null,
+    //             'metal_variations' => $groupedByMetal,
+    //         ];
+    //     }
+    //     $totalProducts = count($validProducts);
+    //     // -----------------------------
+    //     // Final Response
+    //     // -----------------------------
+    //     return response()->json([
+    //         'slug' => $slug,
+    //         // 'style_data' => $styleData,
+    //         // 'collection_data' => $collectionData,
+    //         'metal_types' => $metalTypes,
+    //         'data' => $validProducts,
+    //         'totalProducts' => $totalProducts,
+    //         'currentPage' => $page,
+    //         'perPage' => $perPage,
+    //         'totalPages' => ceil($totalProducts / $perPage),
+    //     ]);
+    // }
     public function weddingData(Request $request, $slug = null)
     {
         $filters = [
@@ -678,7 +993,7 @@ class ProductController extends Controller
         if ($slug) {
             switch ($slug) {
                 case 'mens-wedding-rings':
-                    $filters['gender'] = '0'; 
+                    $filters['gender'] = '0';
                     break;
                 case 'mens-metal-wedding-bands':
                     $filters['gender'] = '0';
@@ -689,7 +1004,7 @@ class ProductController extends Controller
                     $filters['bond'] = '1';
                     break;
                 case 'womens-wedding-rings':
-                    $filters['gender'] = '1'; // only women’s rings
+                    $filters['gender'] = '1';
                     break;
                 case 'womens-metal-wedding-rings':
                     $filters['gender'] = '1';
@@ -701,12 +1016,10 @@ class ProductController extends Controller
                     break;
                 case 'womens-anniversary-rings':
                     $filters['gender'] = '1';
-
-                    // Lookup category id dynamically
                     $category = DB::table('categories')
                         ->whereRaw('LOWER(category_name) = ?', ['anniversary'])
                         ->first();
-                    
+
                     if ($category) {
                         $filters['category'] = $category->category_id;
                     }
@@ -717,12 +1030,11 @@ class ProductController extends Controller
                     $category = DB::table('categories')
                         ->whereRaw('LOWER(category_name) = ?', ['eternity'])
                         ->first();
-                    
+
                     if ($category) {
                         $filters['category'] = $category->category_id;
                     }
                     break;
-
             }
         }
 
@@ -736,47 +1048,14 @@ class ProductController extends Controller
         $perPage = (int) $request->input('perPage', 20);
         $page = (int) $request->input('page', 1);
 
-        // -----------------------------
-        // Style Data
-        // -----------------------------
-        /* $styleData = !empty($filters['subcategory']) || !empty($filters['category'])
-            ? ProductStyleCategory::where('psc_category_id', $filters['subcategory'] ?? $filters['category'])->get()
-            : ProductStyleCategory::join(DB::raw('(
-                SELECT MIN(psc_id) as psc_id FROM products_style_category
-                WHERE parent_category_id IS NULL GROUP BY psc_category_id
-            ) as grouped_styles'), 'products_style_category.psc_id', '=', 'grouped_styles.psc_id')
-                ->select('products_style_category.*')->get();
-        */
-        // -----------------------------
-        // Collection Data
-        // -----------------------------
-       /*  if (!empty($filters['subcategory']) && !empty($filters['category'])) {
-            $collectionData = ProductCollection::where('product_category_id', $filters['subcategory'])->get();
-        } elseif (!empty($filters['category'])) {
-            $collectionData = ProductCollection::where('parent_category_id', $filters['category'])->get();
-        } else {
-            $collectionData = ProductCollection::join(DB::raw('(
-                    SELECT MIN(id) as id
-                    FROM product_collections
-                    WHERE parent_category_id IS NOT NULL AND product_category_id IS NULL
-                    GROUP BY parent_category_id
-                ) as grouped_collection'), 'product_collections.id', '=', 'grouped_collection.id')
-                ->select('product_collections.*')
-                ->get();
-        } */
-
-        // -----------------------------
         // Metal Types sorted
-        // -----------------------------
         $metalTypes = MetalType::all()->sort(function ($a, $b) {
             $aVal = is_numeric(substr($a->dmt_tooltip, 0, 2)) ? (int) filter_var($a->dmt_tooltip, FILTER_SANITIZE_NUMBER_INT) : 999;
             $bVal = is_numeric(substr($b->dmt_tooltip, 0, 2)) ? (int) filter_var($b->dmt_tooltip, FILTER_SANITIZE_NUMBER_INT) : 999;
             return $aVal <=> $bVal;
         })->values();
 
-        // -----------------------------
         // Product + Variation Query (Optimized)
-        // -----------------------------
         $sort = $filters['sort'];
         $sortDirection = in_array($sort, ['price_desc', 'date_desc']) ? 'desc' : 'asc';
         $priceAggFunc = $sort === 'price_desc' ? 'MAX' : 'MIN';
@@ -785,7 +1064,6 @@ class ProductController extends Controller
             ->select('products.products_id')
             ->join('product_variations', 'products.products_id', '=', 'product_variations.product_id')
             ->where('products.is_build_product', 2);
-
 
         // Apply gender filter if set
         if (!is_null($filters['gender'])) {
@@ -797,7 +1075,7 @@ class ProductController extends Controller
             $productQuery->where('products.bond', $filters['bond']);
         }
 
-        // ---- Variation Filters ----
+        // Variation Filters
         if (!empty($filters['price']) && preg_match('/^(\d+)-(\d+)$/', $filters['price'])) {
             [$min, $max] = explode('-', $filters['price']);
             $productQuery->whereBetween('product_variations.price', [(int) $min, (int) $max]);
@@ -806,15 +1084,10 @@ class ProductController extends Controller
             $productQuery->where('product_variations.metal_color_id', $filters['metal_color_id']);
         }
 
-        // ---- Product Filters ----
+        // Product Filters
         if (!empty($filters['category'])) {
             $productQuery->where('products.categories_id', $filters['category']);
         }
-        // if (!empty($filters['subcategory'])) {
-        //     $productQuery->where('products.categories_id', $filters['subcategory']);
-        // } elseif (!empty($filters['category'])) {
-        //     $productQuery->where('products.categories_id', $filters['category']);
-        // }
         if (!empty($filters['menucollection'])) {
             $productQuery->where('products.product_collection_id', $filters['menucollection']);
         }
@@ -828,7 +1101,7 @@ class ProductController extends Controller
             $productQuery->where('products.ready_to_ship', 1);
         }
 
-        // ---- Sorting ----
+        // Sorting
         if ($sort === 'date_asc' || $sort === 'date_desc') {
             $productQuery->orderBy('products.created_at', $sortDirection);
             $totalProducts = (clone $productQuery)->distinct()->count('products.products_id');
@@ -852,8 +1125,6 @@ class ProductController extends Controller
 
         if ($productIds->isEmpty()) {
             return response()->json([
-                // 'style_data' => $styleData,
-                // 'collection_data' => $collectionData,
                 'metal_types' => $metalTypes,
                 'data' => [],
                 'totalProducts' => 0,
@@ -863,14 +1134,14 @@ class ProductController extends Controller
             ]);
         }
 
+        // Get review statistics for these products
+        $reviewStats = $this->getReviewStatsForProducts($productIds->toArray());
 
-        // -----------------------------
         // Fetch Products + Variations
-        // -----------------------------
         $products = Product::with([
-                'productcategory.parent',
-                'variations.metalColor'
-            ])
+            'productcategory.parent',
+            'variations.metalColor'
+        ])
             ->whereIn('products_id', $productIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $productIds->toArray()) . ')')
             ->get();
@@ -931,6 +1202,12 @@ class ProductController extends Controller
                 return is_numeric($quality) ? (int) $quality : PHP_INT_MAX . '_' . $quality;
             });
 
+            // Get review stats for this product
+            $productStats = $reviewStats[$product->products_id] ?? [
+                'average_rating' => 0,
+                'total_reviews' => 0
+            ];
+
             $validProducts[] = [
                 'id' => $product->products_id,
                 'product' => [
@@ -944,6 +1221,9 @@ class ProductController extends Controller
                     'psc_id' => $product->psc_id,
                     'is_build' => $product->is_build_product,
                     'product_collection_id' => $product->product_collection_id,
+                    // Add review statistics
+                    'average_rating' => $productStats['average_rating'],
+                    'total_reviews' => $productStats['total_reviews'],
                 ],
                 'category' => $category ? [
                     'id' => $category->category_id,
@@ -957,13 +1237,10 @@ class ProductController extends Controller
             ];
         }
         $totalProducts = count($validProducts);
-        // -----------------------------
+
         // Final Response
-        // -----------------------------
         return response()->json([
-            'slug' => $slug,
-            // 'style_data' => $styleData,
-            // 'collection_data' => $collectionData,
+            'slug' => $slug, 
             'metal_types' => $metalTypes,
             'data' => $validProducts,
             'totalProducts' => $totalProducts,
@@ -1011,8 +1288,8 @@ class ProductController extends Controller
 
                 // Get all IDs where name = Flutton (case-insensitive)
                 $collectionIds = ProductCollection::whereRaw("LOWER(name) = ?", [$collectionName])
-                                ->pluck('id')
-                                ->toArray();
+                    ->pluck('id')
+                    ->toArray();
 
                 if (empty($collectionIds)) {
                     return $this->emptyResponse($perPage, $slug);
@@ -1042,7 +1319,6 @@ class ProductController extends Controller
                 "psc_category_id",
                 $filters['subcategory'] ?? $filters['category']
             )->get();
-
         } else {
 
             $styleData = ProductStyleCategory::join(DB::raw("
@@ -1051,9 +1327,9 @@ class ProductController extends Controller
                 WHERE parent_category_id IS NULL
                 GROUP BY psc_category_id
                 ) grouped
-            "),'products_style_category.psc_id','=','grouped.psc_id')
-            ->select('products_style_category.*')
-            ->get();
+            "), 'products_style_category.psc_id', '=', 'grouped.psc_id')
+                ->select('products_style_category.*')
+                ->get();
         }
 
         /* -----------------------------------------------------------
@@ -1116,7 +1392,6 @@ class ProductController extends Controller
                 ->skip(($page - 1) * $perPage)
                 ->take($perPage)
                 ->pluck('products.products_id');
-
         } else {
 
             $priceAgg = ($sort === 'price_desc') ? 'MAX' : 'MIN';
@@ -1124,9 +1399,9 @@ class ProductController extends Controller
             $mainProductIds = $productQuery->pluck('products.products_id');
 
             $priceQuery = ProductVariation::select(
-                    'product_id',
-                    DB::raw("$priceAgg(price) AS sort_price")
-                )
+                'product_id',
+                DB::raw("$priceAgg(price) AS sort_price")
+            )
                 ->whereIn('product_id', $mainProductIds)
                 ->groupBy('product_id');
 
@@ -1146,9 +1421,9 @@ class ProductController extends Controller
             8) FETCH FINAL PRODUCTS WITH VARIATIONS
         ----------------------------------------------------------- */
         $products = Product::with([
-                'productcategory.parent',
-                'variations.metalColor'
-            ])
+            'productcategory.parent',
+            'variations.metalColor'
+        ])
             ->whereIn('products_id', $productIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $productIds->toArray()) . ')')
             ->get();
@@ -1189,7 +1464,7 @@ class ProductController extends Controller
                         'metal_color'    => $v->metalColor ? [
                             'id'     => $v->metalColor->dmt_id,
                             'name'   => $v->metalColor->dmt_name,
-                            'quality'=> $v->metalColor->dmt_tooltip,
+                            'quality' => $v->metalColor->dmt_tooltip,
                             'hex'    => $v->metalColor->color_code,
                         ] : null,
                         'weight'         => $v->weight,
@@ -1388,7 +1663,7 @@ class ProductController extends Controller
                 SELECT MIN(psc_id) as psc_id FROM products_style_category
                 WHERE parent_category_id IS NULL GROUP BY psc_category_id
             ) as grouped_styles'), 'products_style_category.psc_id', '=', 'grouped_styles.psc_id')
-                ->select('products_style_category.*')->get();
+            ->select('products_style_category.*')->get();
 
         // -----------------------------
         // Collection Data
@@ -1427,9 +1702,9 @@ class ProductController extends Controller
         $productQuery = Product::query()
             ->select('products.products_id')
             ->join('product_variations', 'products.products_id', '=', 'product_variations.product_id')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('products.is_build_product', '3')
-                ->orWhere('products.is_gift', 1);
+                    ->orWhere('products.is_gift', 1);
             });
 
 
@@ -1515,9 +1790,9 @@ class ProductController extends Controller
         // Fetch Products + Variations
         // -----------------------------
         $products = Product::with([
-                'productcategory.parent',
-                'variations.metalColor'
-            ])
+            'productcategory.parent',
+            'variations.metalColor'
+        ])
             ->whereIn('products_id', $productIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $productIds->toArray()) . ')')
             ->get();
@@ -1667,7 +1942,7 @@ class ProductController extends Controller
                     $category = DB::table('categories')
                         ->whereRaw('LOWER(category_name) = ?', ['anniversary'])
                         ->first();
-                    
+
                     if ($category) {
                         $filters['category'] = $category->category_id;
                     }
@@ -1678,12 +1953,11 @@ class ProductController extends Controller
                     $category = DB::table('categories')
                         ->whereRaw('LOWER(category_name) = ?', ['eternity'])
                         ->first();
-                    
+
                     if ($category) {
                         $filters['category'] = $category->category_id;
                     }
                     break;
-
             }
         }
 
@@ -1706,7 +1980,7 @@ class ProductController extends Controller
                 SELECT MIN(psc_id) as psc_id FROM products_style_category
                 WHERE parent_category_id IS NULL GROUP BY psc_category_id
             ) as grouped_styles'), 'products_style_category.psc_id', '=', 'grouped_styles.psc_id')
-                ->select('products_style_category.*')->get();
+            ->select('products_style_category.*')->get();
 
         // -----------------------------
         // Collection Data
@@ -1745,9 +2019,9 @@ class ProductController extends Controller
         $productQuery = Product::query()
             ->select('products.products_id')
             ->join('product_variations', 'products.products_id', '=', 'product_variations.product_id')
-            ->where(function($q) {
+            ->where(function ($q) {
                 $q->where('products.is_build_product', '4')
-                ->orWhere('products.is_sale', 1);
+                    ->orWhere('products.is_sale', 1);
             });
 
 
@@ -1832,9 +2106,9 @@ class ProductController extends Controller
         // Fetch Products + Variations
         // -----------------------------
         $products = Product::with([
-                'productcategory.parent',
-                'variations.metalColor'
-            ])
+            'productcategory.parent',
+            'variations.metalColor'
+        ])
             ->whereIn('products_id', $productIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $productIds->toArray()) . ')')
             ->get();
@@ -1950,8 +2224,8 @@ class ProductController extends Controller
             'stone:pst_id,pst_name',
             'productClarity:id,name',
         ])
-        ->where('products_id', $id)
-        ->first();
+            ->where('products_id', $id)
+            ->first();
 
         if (!$product) {
             return response()->json(['message' => 'Product not found'], 404);
@@ -2081,4 +2355,38 @@ class ProductController extends Controller
         ]);
     }
 
+    protected function getReviewStatsForProducts($productIds)
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+
+        // Convert to integers if needed
+        $productIds = array_map('intval', $productIds);
+
+        $reviewStats = Review::whereIn('product_id', $productIds)
+            ->whereNull('parent_id')
+            ->where('status', 'approved')
+            ->selectRaw('product_id, COUNT(*) as total_reviews, AVG(rating) as average_rating')
+            ->groupBy('product_id')
+            ->get()
+            ->keyBy('product_id');
+
+        $stats = [];
+        foreach ($productIds as $productId) {
+            if (isset($reviewStats[$productId])) {
+                $stats[$productId] = [
+                    'average_rating' => round($reviewStats[$productId]->average_rating, 1),
+                    'total_reviews' => $reviewStats[$productId]->total_reviews,
+                ];
+            } else {
+                $stats[$productId] = [
+                    'average_rating' => 0,
+                    'total_reviews' => 0,
+                ];
+            }
+        }
+
+        return $stats;
+    }
 }

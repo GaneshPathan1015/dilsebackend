@@ -152,7 +152,7 @@ Route::get('/blogs', [BlogController::class, 'getBlogs']);
 
 Route::get('/reviews/stats', [ReviewController::class, 'getReviewStats']);
 Route::get('/reviews/stats/detailed', [ReviewController::class, 'getReviewStatsWithDetails']);
-Route::get('/reviews/stats/bulk', [ReviewController::class, 'getBulkReviewStats']);
+Route::post('/get-bulk-review-stats', [ReviewController::class, 'getBulkReviewStats']);
 
 Route::apiResource('reviews', ReviewController::class);
 Route::get('/user/reviews', [ReviewController::class, 'getUserReviews']);

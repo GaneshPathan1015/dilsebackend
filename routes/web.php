@@ -121,6 +121,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     })->name('admin.dashboard');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+     Route::get('/dashboard/chart-data', [DashboardController::class, 'getChartData'])->name('dashboard.chart-data');
+    Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats'])->name('dashboard.stats');
 
     Route::get('/profile', [AdminAuthController::class, 'profile'])->name('admin.profile');
     Route::post('/profile/upload', [AdminAuthController::class, 'upload'])->name('profile.upload');
