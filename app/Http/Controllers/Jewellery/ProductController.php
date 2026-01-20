@@ -99,7 +99,7 @@ class ProductController extends Controller
             $file = $request->file('import_file');
             $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
             $spreadsheet = $reader->load($file->getPathname());
-            
+
             // Check if required sheets exist
             if (!$spreadsheet->sheetNameExists('Products') || !$spreadsheet->sheetNameExists('Variations')) {
                 return redirect()->route('product.index')
@@ -674,66 +674,150 @@ class ProductController extends Controller
 
 
 
+    // public function index(Request $request)
+    // {
+    //     if ($request->ajax()) {
+    //         $products = Product::leftJoin('categories', 'products.categories_id', '=', 'categories.category_id')
+    //             ->leftJoin('product_variations', function ($join) {
+    //                 $join->on('products.products_id', '=', 'product_variations.product_id')
+    //                     ->whereRaw('product_variations.id = (SELECT id FROM product_variations WHERE product_id = products.products_id LIMIT 1)');
+    //             })
+    //             ->select('products.*', 'categories.category_name', 'product_variations.images as variation_images', 'product_variations.sku as variation_sku')
+    //             ->orderBy('products.products_id', 'DESC');
+
+    //         // Add SKU filter
+    //         if ($request->has('sku_filter') && !empty($request->sku_filter)) {
+    //             $products->where('product_variations.sku', 'like', '%' . $request->sku_filter . '%');
+    //         }
+
+    //         $products = $products->get();
+
+    //         return DataTables::of($products)
+    //             ->addIndexColumn()
+    //             ->addColumn('products_name', function ($product) {
+    //                 return $product->products_name ?: '-';
+    //             })
+    //             ->addColumn('category_name', function ($product) {
+    //                 return $product->category_name ?? 'N/A';
+    //             })
+    //             ->addColumn('product_image', function ($product) {
+    //                 $images = json_decode($product->variation_images, true);
+    //                 $image = $images[0] ?? null;
+    //                 if ($image) {
+    //                     // Check if it's a full URL (from accessor) or just filename
+    //                     if (filter_var($image, FILTER_VALIDATE_URL)) {
+    //                         return '<img src="' . $image . '" width="50" height="50" style="object-fit: cover; border-radius: 4px;">';
+    //                     } else {
+    //                         return '<img src="' . url('storage/variation_images/' . $image) . '" width="50" height="50" style="object-fit: cover; border-radius: 4px;">';
+    //                     }
+    //                 }
+    //                 return '<div style="width:50px;height:50px;background:#f8f9fa;display:flex;align-items:center;justify-content:center;border-radius:4px;">
+    //                         <i class="bx bx-image" style="font-size:20px;color:#6c757d;"></i>
+    //                     </div>';
+    //             })
+    //             ->addColumn('sku', function ($product) {
+    //                 return $product->variation_sku ?? '-';
+    //             })
+    //             ->editColumn('products_status', function ($product) {
+    //                 return $product->products_status
+    //                     ? '<span class="badge bg-success">Active</span>'
+    //                     : '<span class="badge bg-danger">Inactive</span>';
+    //             })
+    //             ->editColumn('date_added', function ($product) {
+    //                 return $product->date_added
+    //                     ? date('d M Y', strtotime($product->date_added))
+    //                     : '';
+    //             })
+    //             ->rawColumns(['product_image', 'products_status', 'sku', 'products_name', 'category_name'])
+    //             ->make(true);
+    //     }
+
+    //     return view('admin.Jewellery.Product.index');
+    // }
     public function index(Request $request)
-    {
-        if ($request->ajax()) {
-            $products = Product::leftJoin('categories', 'products.categories_id', '=', 'categories.category_id')
-                ->leftJoin('product_variations', function ($join) {
-                    $join->on('products.products_id', '=', 'product_variations.product_id')
-                        ->whereRaw('product_variations.id = (SELECT id FROM product_variations WHERE product_id = products.products_id LIMIT 1)');
-                })
-                ->select('products.*', 'categories.category_name', 'product_variations.images as variation_images', 'product_variations.sku as variation_sku')
-                ->orderBy('products.products_id', 'DESC');
+{
+    if ($request->ajax()) {
+        $products = Product::leftJoin('categories', 'products.categories_id', '=', 'categories.category_id')
+            ->leftJoin('product_variations', function ($join) {
+                $join->on('products.products_id', '=', 'product_variations.product_id')
+                    ->whereRaw('product_variations.id = (SELECT id FROM product_variations WHERE product_id = products.products_id LIMIT 1)');
+            })
+            ->with(['variations.taxRates']) // ✅ Add this line
+            ->select('products.*', 'categories.category_name', 'product_variations.images as variation_images', 'product_variations.sku as variation_sku')
+            ->orderBy('products.products_id', 'DESC');
 
-            // Add SKU filter
-            if ($request->has('sku_filter') && !empty($request->sku_filter)) {
-                $products->where('product_variations.sku', 'like', '%' . $request->sku_filter . '%');
-            }
-
-            $products = $products->get();
-
-            return DataTables::of($products)
-                ->addIndexColumn()
-                ->addColumn('products_name', function ($product) {
-                    return $product->products_name ?: '-';
-                })
-                ->addColumn('category_name', function ($product) {
-                    return $product->category_name ?? 'N/A';
-                })
-                ->addColumn('product_image', function ($product) {
-                    $images = json_decode($product->variation_images, true);
-                    $image = $images[0] ?? null;
-                    if ($image) {
-                        // Check if it's a full URL (from accessor) or just filename
-                        if (filter_var($image, FILTER_VALIDATE_URL)) {
-                            return '<img src="' . $image . '" width="50" height="50" style="object-fit: cover; border-radius: 4px;">';
-                        } else {
-                            return '<img src="' . url('storage/variation_images/' . $image) . '" width="50" height="50" style="object-fit: cover; border-radius: 4px;">';
-                        }
-                    }
-                    return '<div style="width:50px;height:50px;background:#f8f9fa;display:flex;align-items:center;justify-content:center;border-radius:4px;">
-                            <i class="bx bx-image" style="font-size:20px;color:#6c757d;"></i>
-                        </div>';
-                })
-                ->addColumn('sku', function ($product) {
-                    return $product->variation_sku ?? '-';
-                })
-                ->editColumn('products_status', function ($product) {
-                    return $product->products_status
-                        ? '<span class="badge bg-success">Active</span>'
-                        : '<span class="badge bg-danger">Inactive</span>';
-                })
-                ->editColumn('date_added', function ($product) {
-                    return $product->date_added
-                        ? date('d M Y', strtotime($product->date_added))
-                        : '';
-                })
-                ->rawColumns(['product_image', 'products_status', 'sku', 'products_name', 'category_name'])
-                ->make(true);
+        // Add SKU filter
+        if ($request->has('sku_filter') && !empty($request->sku_filter)) {
+            $products->where('product_variations.sku', 'like', '%' . $request->sku_filter . '%');
         }
 
-        return view('admin.Jewellery.Product.index');
+        $products = $products->get();
+
+        return DataTables::of($products)
+            ->addIndexColumn()
+            ->addColumn('products_name', function ($product) {
+                return $product->products_name ?: '-';
+            })
+            ->addColumn('category_name', function ($product) {
+                return $product->category_name ?? 'N/A';
+            })
+            ->addColumn('product_image', function ($product) {
+                $images = json_decode($product->variation_images, true);
+                $image = $images[0] ?? null;
+                if ($image) {
+                    if (filter_var($image, FILTER_VALIDATE_URL)) {
+                        return '<img src="' . $image . '" width="50" height="50" style="object-fit: cover; border-radius: 4px;">';
+                    } else {
+                        return '<img src="' . url('storage/variation_images/' . $image) . '" width="50" height="50" style="object-fit: cover; border-radius: 4px;">';
+                    }
+                }
+                return '<div style="width:50px;height:50px;background:#f8f9fa;display:flex;align-items:center;justify-content:center;border-radius:4px;">
+                        <i class="bx bx-image" style="font-size:20px;color:#6c757d;"></i>
+                    </div>';
+            })
+            ->addColumn('sku', function ($product) {
+                return $product->variation_sku ?? '-';
+            })
+            ->addColumn('tax_info', function ($product) {
+                $variations = $product->variations;
+                $taxInfo = [];
+                
+                foreach ($variations as $variation) {
+                    $taxRates = $variation->taxRates ?? collect([]);
+                    $taxInfo[] = [
+                        'sku' => $variation->sku,
+                        'tax_rates' => $taxRates->map(function($tax) {
+                            return [
+                                'id' => $tax->id,
+                                'name' => $tax->name,
+                                'rate' => $tax->rate,
+                                'type' => $tax->type
+                            ];
+                        }),
+                        'total_tax_rate' => $variation->total_tax_rate,
+                        'tax_amount' => $variation->tax_amount,
+                        'price_with_tax' => $variation->price_with_tax
+                    ];
+                }
+                
+                return $taxInfo;
+            })
+            ->editColumn('products_status', function ($product) {
+                return $product->products_status
+                    ? '<span class="badge bg-success">Active</span>'
+                    : '<span class="badge bg-danger">Inactive</span>';
+            })
+            ->editColumn('date_added', function ($product) {
+                return $product->date_added
+                    ? date('d M Y', strtotime($product->date_added))
+                    : '';
+            })
+            ->rawColumns(['product_image', 'products_status', 'sku', 'products_name', 'category_name'])
+            ->make(true);
     }
+
+    return view('admin.Jewellery.Product.index');
+}
 
     public function create()
     {
@@ -926,45 +1010,44 @@ class ProductController extends Controller
 
                 $taxRateIds = isset($variation['tax_rate_id']) ? json_encode($variation['tax_rate_id']) : null;
 
-            //     $product->variations()->create([
-            //         'diamond_weight' => $variation['diamond_weight'] ?? 0,
-            //         'diamond_quality_id' => $variation['diamond_quality_id'] ?? null,
-            //         'weight' => $weight,
-            //         'price' => $variation['price'],
-            //         'regular_price' => $variation['regular_price'],
-            //         'sku' => $sku,
-            //         'stock' => $variation['stock'] ?? 0,
-            //         'is_best_selling' => $variation['is_best_selling'] ?? 0,
-            //         'metal_color_id' => $variation['metal_color_id'] ?? null,
-            //         'shape_id' => $variation['shape_id'] ?? null,
-            //         // 'tax_rate_id' => $taxRateIds,
-            //         'images' => $imagePaths, // Store array of filenames only
-            //         'video' => $videoName
-            //     ]);
-            //     // ✅ Attach tax rates to variation
-            // if (isset($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
-            //     $newVariation->taxRates()->attach($variation['tax_rate_id']);
-            // }
-            $newVariation = $product->variations()->create([
-    'diamond_weight' => $variation['diamond_weight'] ?? 0,
-    'diamond_quality_id' => $variation['diamond_quality_id'] ?? null,
-    'weight' => $weight,
-    'price' => $variation['price'],
-    'regular_price' => $variation['regular_price'],
-    'sku' => $sku,
-    'stock' => $variation['stock'] ?? 0,
-    'is_best_selling' => $variation['is_best_selling'] ?? 0,
-    'metal_color_id' => $variation['metal_color_id'] ?? null,
-    'shape_id' => $variation['shape_id'] ?? null,
-    'images' => $imagePaths,
-    'video' => $videoName
-]); 
+                //     $product->variations()->create([
+                //         'diamond_weight' => $variation['diamond_weight'] ?? 0,
+                //         'diamond_quality_id' => $variation['diamond_quality_id'] ?? null,
+                //         'weight' => $weight,
+                //         'price' => $variation['price'],
+                //         'regular_price' => $variation['regular_price'],
+                //         'sku' => $sku,
+                //         'stock' => $variation['stock'] ?? 0,
+                //         'is_best_selling' => $variation['is_best_selling'] ?? 0,
+                //         'metal_color_id' => $variation['metal_color_id'] ?? null,
+                //         'shape_id' => $variation['shape_id'] ?? null,
+                //         // 'tax_rate_id' => $taxRateIds,
+                //         'images' => $imagePaths, // Store array of filenames only
+                //         'video' => $videoName
+                //     ]);
+                //     // ✅ Attach tax rates to variation
+                // if (isset($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
+                //     $newVariation->taxRates()->attach($variation['tax_rate_id']);
+                // }
+                $newVariation = $product->variations()->create([
+                    'diamond_weight' => $variation['diamond_weight'] ?? 0,
+                    'diamond_quality_id' => $variation['diamond_quality_id'] ?? null,
+                    'weight' => $weight,
+                    'price' => $variation['price'],
+                    'regular_price' => $variation['regular_price'],
+                    'sku' => $sku,
+                    'stock' => $variation['stock'] ?? 0,
+                    'is_best_selling' => $variation['is_best_selling'] ?? 0,
+                    'metal_color_id' => $variation['metal_color_id'] ?? null,
+                    'shape_id' => $variation['shape_id'] ?? null,
+                    'images' => $imagePaths,
+                    'video' => $videoName
+                ]);
 
-// ✅ Attach tax rates (pivot table)
-if (!empty($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
-    $newVariation->taxRates()->sync($variation['tax_rate_id']);
-}
-
+                // ✅ Pivot table में tax rates attach करें
+                if (!empty($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
+                    $newVariation->taxRates()->sync($variation['tax_rate_id']);
+                }
             }
         }
 
@@ -1282,7 +1365,7 @@ if (!empty($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
                     }
                 }
 
-                                $taxRateIds = isset($variation['tax_rate_id']) ? json_encode($variation['tax_rate_id']) : null;
+                $taxRateIds = isset($variation['tax_rate_id']) ? json_encode($variation['tax_rate_id']) : null;
 
                 // Update existing variation
                 if (isset($variation['id']) && $variation['id'] !== 'new') {
@@ -1298,9 +1381,15 @@ if (!empty($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
                             'is_best_selling' => $variation['is_best_selling'] ?? 0,
                             'metal_color_id' => $variation['metal_color_id'] ?? null,
                             'shape_id' => $variation['shape_id'] ?? null,
-                            // 'tax_rate_id' => $taxRateIds,
                             'images' => $imagePaths, // Store array of filenames only
                         ];
+
+                        // ✅ Tax rates sync करें
+                        if (isset($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
+                            $existingVariation->taxRates()->sync($variation['tax_rate_id']);
+                        } else {
+                            $existingVariation->taxRates()->detach();
+                        }
 
                         // Only update video if we have a new value
                         if ($videoName !== null) {
@@ -1311,13 +1400,7 @@ if (!empty($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
 
                         $existingVariation->update($variationData);
 
-                        // ✅ Sync tax rates for variation
-                    if (isset($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
-                        $existingVariation->taxRates()->sync($variation['tax_rate_id']);
-                    } else {
-                        $existingVariation->taxRates()->detach();
-                    }
-                    
+
                         $usedVariationIds[] = $existingVariation->id;
                         continue;
                     }
@@ -1359,10 +1442,10 @@ if (!empty($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
 
                 $newVariation = $product->variations()->create($variationData);
 
-                // ✅ Attach tax rates to new variation
-            if (isset($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
-                $newVariation->taxRates()->attach($variation['tax_rate_id']);
-            }
+                // ✅ Tax rates attach करें
+                if (isset($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
+                    $newVariation->taxRates()->attach($variation['tax_rate_id']);
+                }
                 $usedVariationIds[] = $newVariation->id;
             }
         }
@@ -1706,7 +1789,7 @@ if (!empty($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
             'gender.in' => 'Gender must be either Man or Woman.',
             'bond.required' => 'Bond is required when Build Product is Wedding.',
             'bond.in' => 'Bond must be either Metal or Diamond.',
-            
+
         ];
     }
 
@@ -1735,5 +1818,14 @@ if (!empty($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
             'imageUrl' => $firstImage,
         ]);
     }
-}
 
+    public function getProductWithVariations($productId)
+    {
+        $product = Product::with(['variations.taxRates'])->findOrFail($productId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $product
+        ]);
+    }
+}

@@ -29,12 +29,14 @@ class ProductVariation extends Model
         'vendor_id',
         'parent_category_id',
         'is_best_selling',
-        'tax_rate_id',
+        // 'tax_rate_id',
     ];
     
     protected $casts = [
         'images' => 'array',
     ];
+        protected $appends = ['video_url', 'tax_rate_names', 'tax_rate_ids', 'total_tax_rate'];
+
 
     public function getCurrentMetalPrice()
     {
@@ -187,27 +189,40 @@ class ProductVariation extends Model
     {
         return $this->belongsTo(DiamondQualityGroup::class, 'diamond_quality_id', 'dqg_id');
     }
-    public function taxRate()
-    {
-        return $this->belongsTo(TaxRate::class);
-    }
-
-    // ✅ New many-to-many relationship with TaxRate
+     // ✅ नया many-to-many relationship TaxRate के साथ
     public function taxRates() 
     {
         return $this->belongsToMany(TaxRate::class, 'product_variation_tax_rate');
     }
 
-    // ✅ Get formatted tax rate names
+    // ✅ Tax rate names लाने के लिए
     public function getTaxRateNamesAttribute()
     {
         return $this->taxRates->pluck('name')->implode(', ');
     }
 
-    // ✅ Get tax rate IDs
+    // ✅ Tax rate IDs लाने के लिए
     public function getTaxRateIdsAttribute()
     {
         return $this->taxRates->pluck('id')->toArray();
+    }
+
+    // ✅ Total tax percentage calculate करने के लिए
+    public function getTotalTaxRateAttribute()
+    {
+        return $this->taxRates->sum('rate');
+    }
+
+    // ✅ Tax amount calculate करने के लिए
+    public function getTaxAmountAttribute()
+    {
+        return ($this->price * $this->total_tax_rate) / 100;
+    }
+
+    // ✅ Price with tax calculate करने के लिए
+    public function getPriceWithTaxAttribute()
+    {
+        return $this->price + $this->tax_amount;
     }
 }
 

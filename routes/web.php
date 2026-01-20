@@ -405,6 +405,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/get-category-psc-and-collections', [ProductController::class, 'getCategoryPscAndCollections'])->name('get.category.psc.and.collections');
         Route::get('/get-collections-by-category', [ProductController::class, 'getCollectionsByCategory'])->name('get.collections.by.category');
         Route::get('/get-style-groups-by-collection', [ProductController::class, 'getStyleGroupsByCollection'])->name('get.style.groups.by.collection');
+        Route::get('/products/{productId}/variations-with-tax', [ProductController::class, 'getProductWithVariations']);
     });
 
     Route::controller(ProductToStyleCategoryController::class)->group(function () {
