@@ -83,7 +83,6 @@
                 @endforeach
             </div>
         </div>
-
         {{-- Section: Diamond Attributes --}}
         <div class="card mb-4">
             <div class="card-header"><strong>Diamond Attributes</strong></div>

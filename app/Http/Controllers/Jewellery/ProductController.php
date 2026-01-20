@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\Category;
+use App\Models\TaxRate;
 use App\Models\ProductImage;
 use App\Models\DiamondMaster;
 use App\Models\Country;
@@ -754,6 +755,7 @@ class ProductController extends Controller
         $initialPscId = old('psc_id', '');
         $initialCollectionId = old('product_collection_id', '');
         $initialStyleGroupId = old('product_style_group_id', '');
+        $taxRates = TaxRate::active()->get();
 
         // Add build product options
         $buildProductOptions = Product::getBuildProductOptions();
@@ -829,7 +831,8 @@ class ProductController extends Controller
                 'selectedCategoryValue',
                 'initialPscId',
                 'initialCollectionId',
-                'initialStyleGroupId'
+                'initialStyleGroupId',
+                'taxRates'
             )
         );
     }
@@ -921,20 +924,47 @@ class ProductController extends Controller
                 }
                 $skusInRequest[] = $sku;
 
-                $product->variations()->create([
-                    'diamond_weight' => $variation['diamond_weight'] ?? 0,
-                    'diamond_quality_id' => $variation['diamond_quality_id'] ?? null,
-                    'weight' => $weight,
-                    'price' => $variation['price'],
-                    'regular_price' => $variation['regular_price'],
-                    'sku' => $sku,
-                    'stock' => $variation['stock'] ?? 0,
-                    'is_best_selling' => $variation['is_best_selling'] ?? 0,
-                    'metal_color_id' => $variation['metal_color_id'] ?? null,
-                    'shape_id' => $variation['shape_id'] ?? null,
-                    'images' => $imagePaths, // Store array of filenames only
-                    'video' => $videoName
-                ]);
+                $taxRateIds = isset($variation['tax_rate_id']) ? json_encode($variation['tax_rate_id']) : null;
+
+            //     $product->variations()->create([
+            //         'diamond_weight' => $variation['diamond_weight'] ?? 0,
+            //         'diamond_quality_id' => $variation['diamond_quality_id'] ?? null,
+            //         'weight' => $weight,
+            //         'price' => $variation['price'],
+            //         'regular_price' => $variation['regular_price'],
+            //         'sku' => $sku,
+            //         'stock' => $variation['stock'] ?? 0,
+            //         'is_best_selling' => $variation['is_best_selling'] ?? 0,
+            //         'metal_color_id' => $variation['metal_color_id'] ?? null,
+            //         'shape_id' => $variation['shape_id'] ?? null,
+            //         // 'tax_rate_id' => $taxRateIds,
+            //         'images' => $imagePaths, // Store array of filenames only
+            //         'video' => $videoName
+            //     ]);
+            //     // ✅ Attach tax rates to variation
+            // if (isset($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
+            //     $newVariation->taxRates()->attach($variation['tax_rate_id']);
+            // }
+            $newVariation = $product->variations()->create([
+    'diamond_weight' => $variation['diamond_weight'] ?? 0,
+    'diamond_quality_id' => $variation['diamond_quality_id'] ?? null,
+    'weight' => $weight,
+    'price' => $variation['price'],
+    'regular_price' => $variation['regular_price'],
+    'sku' => $sku,
+    'stock' => $variation['stock'] ?? 0,
+    'is_best_selling' => $variation['is_best_selling'] ?? 0,
+    'metal_color_id' => $variation['metal_color_id'] ?? null,
+    'shape_id' => $variation['shape_id'] ?? null,
+    'images' => $imagePaths,
+    'video' => $videoName
+]); 
+
+// ✅ Attach tax rates (pivot table)
+if (!empty($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
+    $newVariation->taxRates()->sync($variation['tax_rate_id']);
+}
+
             }
         }
 
@@ -1022,6 +1052,7 @@ class ProductController extends Controller
     {
         $product = Product::with([
             'variations',
+            'variations.taxRates',
             'images'
         ])->findOrFail($id);
 
@@ -1036,6 +1067,8 @@ class ProductController extends Controller
         $initialPscId = $product->psc_id ?? '';
         $initialCollectionId = $product->product_collection_id ?? '';
         $initialStyleGroupId = $product->product_style_group_id ?? '';
+
+        $taxRates = TaxRate::active()->get();
 
         // Add build product options
         $buildProductOptions = Product::getBuildProductOptions();
@@ -1125,7 +1158,8 @@ class ProductController extends Controller
             'selectedCategoryValue',
             'initialPscId',
             'initialCollectionId',
-            'initialStyleGroupId'
+            'initialStyleGroupId',
+            'taxRates'
         ));
     }
 
@@ -1248,6 +1282,8 @@ class ProductController extends Controller
                     }
                 }
 
+                                $taxRateIds = isset($variation['tax_rate_id']) ? json_encode($variation['tax_rate_id']) : null;
+
                 // Update existing variation
                 if (isset($variation['id']) && $variation['id'] !== 'new') {
                     $existingVariation = $product->variations()->find($variation['id']);
@@ -1262,6 +1298,7 @@ class ProductController extends Controller
                             'is_best_selling' => $variation['is_best_selling'] ?? 0,
                             'metal_color_id' => $variation['metal_color_id'] ?? null,
                             'shape_id' => $variation['shape_id'] ?? null,
+                            // 'tax_rate_id' => $taxRateIds,
                             'images' => $imagePaths, // Store array of filenames only
                         ];
 
@@ -1273,6 +1310,14 @@ class ProductController extends Controller
                         }
 
                         $existingVariation->update($variationData);
+
+                        // ✅ Sync tax rates for variation
+                    if (isset($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
+                        $existingVariation->taxRates()->sync($variation['tax_rate_id']);
+                    } else {
+                        $existingVariation->taxRates()->detach();
+                    }
+                    
                         $usedVariationIds[] = $existingVariation->id;
                         continue;
                     }
@@ -1304,6 +1349,7 @@ class ProductController extends Controller
                     'stock' => $variation['stock'] ?? 0,
                     'metal_color_id' => $variation['metal_color_id'] ?? null,
                     'shape_id' => $variation['shape_id'] ?? null,
+                    'tax_tae_id' => $taxRateIds,
                     'images' => $imagePaths // Store array of filenames only
                 ];
 
@@ -1312,6 +1358,11 @@ class ProductController extends Controller
                 }
 
                 $newVariation = $product->variations()->create($variationData);
+
+                // ✅ Attach tax rates to new variation
+            if (isset($variation['tax_rate_id']) && is_array($variation['tax_rate_id'])) {
+                $newVariation->taxRates()->attach($variation['tax_rate_id']);
+            }
                 $usedVariationIds[] = $newVariation->id;
             }
         }
@@ -1541,6 +1592,8 @@ class ProductController extends Controller
             'variations.*.video'          => 'sometimes|mimetypes:video/avi,video/mpeg,video/quicktime,video/mp4|max:307200',
             'is_sale'                     => 'sometimes|boolean',
             'is_gift'                     => 'sometimes|boolean',
+            'variations.*.tax_rate_id'    => 'required|array|min:1', // ✅ Add tax rate validation
+            'variations.*.tax_rate_id.*'  => 'exists:tax_rates,id',
         ];
 
         // Update the condition for build product
@@ -1653,6 +1706,7 @@ class ProductController extends Controller
             'gender.in' => 'Gender must be either Man or Woman.',
             'bond.required' => 'Bond is required when Build Product is Wedding.',
             'bond.in' => 'Bond must be either Metal or Diamond.',
+            
         ];
     }
 
@@ -1682,3 +1736,4 @@ class ProductController extends Controller
         ]);
     }
 }
+

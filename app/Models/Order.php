@@ -553,3 +553,4 @@ class Order extends Model
         return $address['phone'] ?? $address['phone_number'] ?? $this->contact_number;
     }
 }
+  

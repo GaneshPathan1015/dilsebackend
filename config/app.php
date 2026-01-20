@@ -214,4 +214,31 @@ return [
         // 'ExampleClass' => App\Example\ExampleClass::class,
     ])->toArray(),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Company GST Details
+    |--------------------------------------------------------------------------
+    */
+    'company_name' => env('COMPANY_NAME', 'Dilse Jewels'),
+    'company_gstin' => env('COMPANY_GSTIN', '22AAAAA0000A1Z5'),
+    'company_state' => env('COMPANY_STATE', 'Gujarat'),
+    'company_address' => env('COMPANY_ADDRESS', '123 Jewel Street, Surat, Gujarat'),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | GST Configuration
+    |--------------------------------------------------------------------------
+    */
+    'gst_rates' => [
+        'diamond' => env('GST_DIAMOND_RATE', 0.25),
+        'gold' => env('GST_GOLD_RATE', 3.00),
+        'making' => env('GST_MAKING_RATE', 3.00),
+    ],
+    
+    'hsn_codes' => [
+        'diamond' => env('HSN_DIAMOND_CODE', '7102'),
+        'gold' => env('HSN_GOLD_CODE', '7113'),
+        'making' => env('HSN_MAKING_CODE', '7113'),
+    ],
+
 ];

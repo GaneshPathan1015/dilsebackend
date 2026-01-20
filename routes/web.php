@@ -59,6 +59,23 @@ use App\Http\Controllers\Jewellery\ContactUsController;
 use App\Http\Controllers\Jewellery\BlogController;
 use App\Http\Controllers\Jewellery\EnquiryController;
 use App\Http\Controllers\Jewellery\UserController;
+use App\Http\Controllers\Admin\TaxRateController;
+
+Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
+    Route::get('/tax-rates', [TaxRateController::class, 'index'])->name('admin.tax-rates.index');
+    Route::get('/tax-rates/data', [TaxRateController::class, 'data'])->name('admin.tax-rates.data');
+    Route::post('/tax-rates', [TaxRateController::class, 'store'])->name('admin.tax-rates.store');
+    Route::get('/tax-rates/{id}/edit', [TaxRateController::class, 'edit'])->name('admin.tax-rates.edit');
+    Route::put('/tax-rates/{id}', [TaxRateController::class, 'update'])->name('admin.tax-rates.update');
+    Route::delete('/tax-rates/{id}', [TaxRateController::class, 'destroy'])->name('admin.tax-rates.destroy');
+});
+
+
+// Product GST Calculation Route
+Route::post('products/calculate-gst', [ProductController::class, 'calculateGST'])->name('products.calculate-gst');
+
+// Diamond GST Calculation Route
+Route::post('diamonds/calculate-gst', [DiamondMasterController::class, 'calculateGST'])->name('diamonds.calculate-gst');
 
 
 Route::prefix('admin/jewellery')->group(function () {
@@ -105,6 +122,7 @@ Route::prefix('products')->group(function () {
 |
 */
 
+
 Route::get('/', [AdminAuthController::class, 'showLoginForm'])->name('admin.login');
 Route::post('/admin/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
 Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
@@ -121,7 +139,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     })->name('admin.dashboard');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-     Route::get('/dashboard/chart-data', [DashboardController::class, 'getChartData'])->name('dashboard.chart-data');
+    Route::get('/dashboard/chart-data', [DashboardController::class, 'getChartData'])->name('dashboard.chart-data');
     Route::get('/dashboard/stats', [DashboardController::class, 'getDashboardStats'])->name('dashboard.stats');
 
     Route::get('/profile', [AdminAuthController::class, 'profile'])->name('admin.profile');
@@ -280,21 +298,21 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     // }); 
 
     Route::controller(DiamondMasterController::class)->group(function () {
-    // Import/Export Routes
-    Route::get('diamond-master/export', 'export')->name('diamond-master.export');
-    Route::post('diamond-master/import', 'import')->name('diamond-master.import');
-    Route::get('diamond-master/download-sample', 'downloadSample')->name('diamond-master.download-sample');
-    Route::get('diamond-master/import-errors', 'importErrors')->name('diamond-master.import-errors');
-     
-    // CRUD Routes 
-    Route::get('diamond-master', 'index')->name('diamond-master.index');
-    Route::get('diamond-master/data', 'dataBackend')->name('diamond-master.data');
-    Route::get('DiamondMaster/master/create', 'create')->name('diamond-master.create');
-    Route::post('diamond-master', 'store')->name('diamond-master.store');
-    Route::get('DiamondMaster/master/{id}/edit', 'edit')->name('diamond-master.edit');
-    Route::put('diamond-master/{id}', 'update')->name('diamond-master.update');
-    Route::delete('diamond-master/{id}', 'destroy')->name('diamond-master.destroy');
-});
+        // Import/Export Routes
+        Route::get('diamond-master/export', 'export')->name('diamond-master.export');
+        Route::post('diamond-master/import', 'import')->name('diamond-master.import');
+        Route::get('diamond-master/download-sample', 'downloadSample')->name('diamond-master.download-sample');
+        Route::get('diamond-master/import-errors', 'importErrors')->name('diamond-master.import-errors');
+
+        // CRUD Routes 
+        Route::get('diamond-master', 'index')->name('diamond-master.index');
+        Route::get('diamond-master/data', 'dataBackend')->name('diamond-master.data');
+        Route::get('DiamondMaster/master/create', 'create')->name('diamond-master.create');
+        Route::post('diamond-master', 'store')->name('diamond-master.store');
+        Route::get('DiamondMaster/master/{id}/edit', 'edit')->name('diamond-master.edit');
+        Route::put('diamond-master/{id}', 'update')->name('diamond-master.update');
+        Route::delete('diamond-master/{id}', 'destroy')->name('diamond-master.destroy');
+    });
 
     Route::controller(CategoryController::class)->group(function () {
         Route::get('category', 'index')->name('category.index');
@@ -536,14 +554,14 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::delete('tax-classes/{id}', 'destroy')->name('tax-classes.destroy');
     });
 
-    Route::controller(ShopTaxRateController::class)->group(function () {
-        Route::get('tax-rates/', [ShopTaxRateController::class, 'index'])->name('tax-rates.index');
-        Route::get('tax-rates/data', [ShopTaxRateController::class, 'getData'])->name('tax-rates.data');
-        Route::post('tax-rates/', [ShopTaxRateController::class, 'store'])->name('tax-rates.store');
-        Route::get('tax-rates/{id}', [ShopTaxRateController::class, 'show'])->name('tax-rates.show');
-        Route::put('tax-rates/{id}', [ShopTaxRateController::class, 'update'])->name('tax-rates.update');
-        Route::delete('tax-rates/{id}', [ShopTaxRateController::class, 'destroy'])->name('tax-rates.destroy');
-    });
+    // Route::controller(ShopTaxRateController::class)->group(function () {
+    //     Route::get('tax-rates/', [ShopTaxRateController::class, 'index'])->name('tax-rates.index');
+    //     Route::get('tax-rates/data', [ShopTaxRateController::class, 'getData'])->name('tax-rates.data');
+    //     Route::post('tax-rates/', [ShopTaxRateController::class, 'store'])->name('tax-rates.store');
+    //     Route::get('tax-rates/{id}', [ShopTaxRateController::class, 'show'])->name('tax-rates.show');
+    //     Route::put('tax-rates/{id}', [ShopTaxRateController::class, 'update'])->name('tax-rates.update');
+    //     Route::delete('tax-rates/{id}', [ShopTaxRateController::class, 'destroy'])->name('tax-rates.destroy');
+    // });
 
     Route::controller(\App\Http\Controllers\Jewellery\CollectionController::class)->prefix('jewellery')->group(function () {
         Route::get('collections/', 'index')->name('collections.index');
@@ -574,11 +592,21 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         Route::get('/update-products-form', 'showPriceUpdateForm')->name('metal-prices.update-products.form');
     });
 
-    Route::controller(\App\Http\Controllers\Jewellery\AppointmentController::class)->group(function () {
+    // Route::controller(\App\Http\Controllers\Jewellery\AppointmentController::class)->group(function () {
+    //     Route::get('appointments', 'index')->name('admin.appointments.index');
+    //     Route::get('appointments/fetch', 'fetch')->name('admin.appointments.fetch');
+    //     Route::get('appointments/show/{id}', 'show')->name('admin.appointments.show');
+    //     Route::delete('appointments/delete/{id}', 'destroy')->name('admin.appointments.delete');
+    // });
+
+    Route::controller(AppointmentController::class)->group(function () {
         Route::get('appointments', 'index')->name('admin.appointments.index');
         Route::get('appointments/fetch', 'fetch')->name('admin.appointments.fetch');
         Route::get('appointments/show/{id}', 'show')->name('admin.appointments.show');
+        Route::post('appointments/schedule/{id}', 'schedule')->name('admin.appointments.schedule');
+        Route::post('appointments/send-email/{id}', 'sendEmail')->name('admin.appointments.send-email');
         Route::delete('appointments/delete/{id}', 'destroy')->name('admin.appointments.delete');
+        Route::get('appointments/stats', 'getStats')->name('admin.appointments.stats');
     });
 
 

@@ -23,6 +23,7 @@ use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\DB;
 use App\Models\Coupon;
 use Illuminate\Support\Facades\Validator;
+use App\Models\OrderItemTax;
 
 
 
@@ -265,13 +266,14 @@ class OrderController extends Controller
             ], 500);
         }
     }
-
+    
     public function downloadInvoice(Order $order)
     {
         $processedItems = $this->processItemsForOrder($order);
         $pdf = Pdf::loadView('admin.DiamondMaster.Orders.invoice', compact('order', 'processedItems'));
         return $pdf->download("Invoice-{$order->order_id}.pdf");
     }
+
 
     public function sendInvoice(Request $request, Order $order)
     {
@@ -721,6 +723,9 @@ class OrderController extends Controller
             'total'   => 0
         ];
 
+        // ✅ Array to store product variations for tax calculation
+        $productVariationsForTax = [];
+
         // Process each item in the payload
         foreach ($payload as $item) {
             $quantity = $item['quantity'] ?? $item['itemQuantity'] ?? 1;
@@ -749,6 +754,15 @@ class OrderController extends Controller
                             'type' => $item['type'] ?? ''
                         ];
                         $quantities['jewelry'] += $quantity;
+                         // ✅ Store for tax calculation
+                        if (isset($item['variation_id'])) {
+                            $productVariationsForTax[] = [
+                                'product_variation_id' => $item['variation_id'],
+                                'order_item_id' => null, // Will be set after order creation
+                                'price' => $item['price'] ?? 0,
+                                'quantity' => $quantity
+                            ];
+                        }
                     }
                     break;
 
@@ -825,6 +839,24 @@ class OrderController extends Controller
 
             $order = Order::create($validated);
 
+             // ✅ Calculate and create tax records for each product variation
+            $isInterState = $this->checkIfInterState($validated['address'] ?? []);
+            
+            foreach ($productVariationsForTax as $item) {
+                $taxRecords = OrderItemTax::createForOrderItem(
+                    $order->id,
+                    null, // order_item_id - you might need to create order items first
+                    $item['product_variation_id'],
+                    $item['price'] * $item['quantity'],
+                    $isInterState
+                );
+                
+                // Insert tax records
+                foreach ($taxRecords as $taxRecord) {
+                    OrderItemTax::create($taxRecord);
+                }
+            }
+
             // ✅ NEW: Send confirmation emails
             $this->sendOrderConfirmationEmail($order);
 
@@ -843,8 +875,14 @@ class OrderController extends Controller
         }
     }
 
-
-
+     private function checkIfInterState($address)
+    {
+        
+        $businessState = 'Maharashtra'; // Your business state
+        $shippingState = $address['state'] ?? $address['administrative_area'] ?? null;
+        
+        return $shippingState && $shippingState !== $businessState;
+    }
 
     public function update(Request $request, Order $order)
     {

@@ -131,9 +131,9 @@
                 <li class="menu-item {{ request()->routeIs('tax-classes.index') ? 'active' : '' }}">
                     <a href="{{ route('tax-classes.index') }}" class="menu-link">Shop Tax Class</a>
                 </li>
-                <li class="menu-item {{ request()->routeIs('tax-rates.index') ? 'active' : '' }}">
+                {{-- <li class="menu-item {{ request()->routeIs('tax-rates.index') ? 'active' : '' }}">
                     <a href="{{ route('tax-rates.index') }}" class="menu-link">Shop Tax Rate</a>
-                </li>
+                </li> --}}
                 <li class="menu-item {{ request()->routeIs('product-style-category.index') ? 'active' : '' }}">
                     <a href="{{ route('product-style-category.index') }}" class="menu-link">Product Style Category</a>
                 </li>

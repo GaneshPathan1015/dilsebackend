@@ -10,9 +10,7 @@ class Appointment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'provider_id',
-        'service_id',
-        'name',
+        'name', 
         'contact_number',
         'email',
         'appointment_date',
@@ -20,9 +18,8 @@ class Appointment extends Model
         'appointment_type',
         'location',
         'meeting_link',
-        'status',
         'time_zone',
-        'today_time',
+        'scheduled_at',
         'guest_email',
         'category',
         'other_category',
@@ -31,5 +28,36 @@ class Appointment extends Model
 
     protected $casts = [
         'appointment_date' => 'date',
+        'scheduled_at' => 'datetime'
     ];
+
+    // Check if appointment is scheduled
+    public function isScheduled()
+    {
+        return !is_null($this->appointment_date) && !is_null($this->appointment_time);
+    }
+
+    // Scope for unscheduled appointments
+    public function scopeUnscheduled($query)
+    {
+        return $query->whereNull('appointment_date');
+    }
+
+    // Scope for scheduled appointments
+    public function scopeScheduled($query)
+    {
+        return $query->whereNotNull('appointment_date');
+    }
+
+    // Scope for virtual appointments
+    public function scopeVirtual($query)
+    {
+        return $query->where('appointment_type', 'virtual');
+    }
+
+    // Scope for showroom appointments
+    public function scopeShowroom($query)
+    {
+        return $query->where('appointment_type', 'showroom');
+    }
 }

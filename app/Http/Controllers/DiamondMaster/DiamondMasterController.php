@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Log;
 use App\Exports\DiamondMasterExport;
 use App\Imports\DiamondMasterImport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\TaxRate; 
 
 class DiamondMasterController extends Controller
 {
@@ -234,6 +235,7 @@ class DiamondMasterController extends Controller
 
     public function create()
     {
+        $taxRates = TaxRate::active()->get(); 
         return view('admin.DiamondMaster.master.create', [
             'vendors' => DiamondVendor::pluck('vendor_name', 'vendorid'),
             'labs' => DiamondLab::pluck('dl_name', 'dl_id'),
@@ -247,12 +249,15 @@ class DiamondMasterController extends Controller
             'culet' => DiamondCulet::pluck('dc_name', 'dc_id'),
             'fancyColorIntensity' => DiamondFancyColorIntensity::pluck('fci_name', 'fci_id'),
             'fancycolorOvertones' => DiamondFancyColor::pluck('fco_name', 'fco_id'),
+            'taxRates' => $taxRates,
         ]);
     }
 
     public function store(Request $request)
     {
         $rules = [
+                    'tax_rate_id' => 'nullable|array', // ✅ Change to array validation
+        'tax_rate_id.*' => 'exists:tax_rates,id', // ✅ Add array element validation
             'diamond_type' => 'required|in:1,2',
             'quantity' => 'required|integer|min:1',
             'vendor_id' => 'required|exists:vendor_master,vendorid',
@@ -334,13 +339,16 @@ class DiamondMasterController extends Controller
 
         $validatedData['date_added'] = now();
         $validatedData['added_by'] = auth()->id();
-        DiamondMaster::create($validatedData);
+        $diamond = DiamondMaster::create($validatedData);
+        // ✅ Attach tax rates to diamond
 
         return response()->json(['message' => 'Diamond added successfully.']);
     }
 
     public function edit($id)
     {
+        $diamond = DiamondMaster::with(['taxRates'])->findOrFail($id); // ✅ Load tax rates
+        $taxRates = TaxRate::active()->get(); // ✅ Get all tax rates
         $diamond = DiamondMaster::findOrFail($id);
         return view('admin.DiamondMaster.master.edit', array_merge(
             ['diamond' => $diamond],
@@ -357,6 +365,7 @@ class DiamondMasterController extends Controller
                 'culet' => DiamondCulet::pluck('dc_name', 'dc_id'),
                 'fancyColorIntensity' => DiamondFancyColorIntensity::pluck('fci_name', 'fci_id'),
                 'fancycolorOvertones' => DiamondFancyColor::pluck('fco_name', 'fco_id'),
+                'taxRates' => $taxRates,
             ]
         ));
     }
@@ -364,6 +373,8 @@ class DiamondMasterController extends Controller
     public function update(Request $request, $id)
     {
         $rules = [
+            'tax_rate_id' => 'nullable|array', // ✅ Change to array validation
+        'tax_rate_id.*' => 'exists:tax_rates,id', // ✅ Add array element validation
             'diamond_type' => 'required|in:1,2',
             'quantity' => 'required|integer|min:1',
             'vendor_id' => 'required|exists:vendor_master,vendorid',
@@ -408,6 +419,8 @@ class DiamondMasterController extends Controller
 
         $diamond = DiamondMaster::findOrFail($id);
         $validatedData = $validator->validated();
+        
+
 
         // Handle image file upload - store only filename
         if ($request->hasFile('image_file')) {
@@ -682,3 +695,4 @@ class DiamondMasterController extends Controller
         return view('admin.DiamondMaster.import');
     }
 }
+
