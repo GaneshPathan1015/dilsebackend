@@ -350,9 +350,9 @@
                         <div class="card-body">
                             <div class="text-center mb-4">
                                 <h6 class="mb-1">Yearly Comparison</h6>
-                                <p class="text-muted">Revenue growth percentage</p>
+                                <p class="text-muted">Revenue growth percentage</p> 
                             </div>
-                            <div id="growthChart"></div>
+                            {{-- <div id="growthChart"></div> --}}
                             
                             <!-- Yearly Revenue Summary -->
                             <div class="mt-4">
@@ -799,7 +799,7 @@
                 ['id' => 'product-color', 'title' => 'Product Color', 'count' => $totalProductColor, 'icon' => 'bx-color-fill', 'route' => 'product-color.index', 'color' => 'danger'],
                 ['id' => 'product-cut', 'title' => 'Product Cut', 'count' => $totalProductCut, 'icon' => 'bx-cut', 'route' => 'product-cut.index', 'color' => 'primary'],
                 ['id' => 'tax-classes', 'title' => 'Tax Classes', 'count' => $totalTaxClasses, 'icon' => 'bx-receipt', 'route' => 'tax-classes.index', 'color' => 'success'],
-                ['id' => 'tax-rates', 'title' => 'Tax Rates', 'count' => $totalTaxRates, 'icon' => 'bx-percentage', 'route' => 'tax-rates.index', 'color' => 'info'],
+                // ['id' => 'tax-rates', 'title' => 'Tax Rates', 'count' => $totalTaxRates, 'icon' => 'bx-percentage', 'route' => 'tax-rates.index', 'color' => 'info'],
                 ['id' => 'product-style-category', 'title' => 'Style Categories', 'count' => $totalProductStyleCategories, 'icon' => 'bx-category-alt', 'route' => 'product-style-category.index', 'color' => 'warning'],
                 ['id' => 'collections', 'title' => 'Collections', 'count' => $totalCollections, 'icon' => 'bx-collection', 'route' => 'collections.index', 'color' => 'danger'],
                 ['id' => 'style-groups', 'title' => 'Style Groups', 'count' => $totalStyleGroups, 'icon' => 'bx-group', 'route' => 'style-groups.index', 'color' => 'primary'],

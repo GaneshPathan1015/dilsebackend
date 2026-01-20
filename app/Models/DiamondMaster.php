@@ -98,6 +98,7 @@ class DiamondMaster extends Model
         'diamond_type',
         'quantity',
         'vendor_id',
+        'tax_rate_id',
         'vendor_stock_number',
         'stock_number',
         'same_diamond_stock_number',
@@ -189,3 +190,4 @@ class DiamondMaster extends Model
         'updated_by'
     ];
 }
+

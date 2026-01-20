@@ -66,6 +66,40 @@
             border: 1px solid #ddd;
             height: auto;
         }
+
+        /* Add to your existing CSS */
+.select2-container--default .select2-selection--multiple {
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    min-height: 38px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+    padding: 2px 10px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #007bff;
+    border: 1px solid #007bff;
+    color: white;
+    padding: 2px 8px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: white;
+    margin-right: 5px;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.select2-container {
+    width: 100% !important;
+}
         
         .form-control:focus, .form-select:focus {
             box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
@@ -260,6 +294,7 @@
         .custom-pr {
             padding-right: 30px;
         }
+        
         
         @media (max-width: 992px) {
             .woocommerce-layout {
@@ -634,6 +669,20 @@
                                                         @endforeach
                                                     </select>
                                                 </div>
+
+                                                 <!-- ✅ Tax Rate Dropdown - MULTIPLE SELECT -->
+                <div class="col-md-3">
+                    <label class="form-label">Tax Rate *</label>
+                    <select name="variations[0][tax_rate_id][]" class="form-select tax-rate-select" multiple="multiple" style="width: 100%;">
+                        @foreach($taxRates as $taxRate)
+                            <option value="{{ $taxRate->id }}" 
+                                {{ (is_array(old('variations.0.tax_rate_id')) && in_array($taxRate->id, old('variations.0.tax_rate_id'))) ? 'selected' : '' }}>
+                                {{ $taxRate->name }} ({{ $taxRate->rate }}%)
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="error-message" id="error-variations-0-tax_rate_id"></div>
+                </div>
                                                 
                                                 <div class="col-md-3">
                                                     <label class="form-label">Best Selling</label>
@@ -978,6 +1027,19 @@
                                 @endforeach
                             </select>
                         </div>
+
+                        <!-- ✅ Tax Rate Dropdown - MULTIPLE SELECT -->
+                    <div class="col-md-3">
+                        <label class="form-label">Tax Rate *</label>
+                        <select name="variations[${variationCount}][tax_rate_id][]" class="form-select tax-rate-select" multiple="multiple" style="width: 100%;">
+                            @foreach($taxRates as $taxRate)
+                                <option value="{{ $taxRate->id }}">
+                                    {{ $taxRate->name }} ({{ $taxRate->rate }}%)
+                                </option>
+                            @endforeach
+                        </select>
+                        <div class="error-message" id="error-variations-${variationCount}-tax_rate_id"></div>
+                    </div>
                         
                         <div class="col-md-3">
                             <label class="form-label">Best Selling</label>
@@ -1028,8 +1090,17 @@
                 `;
                 
                 $('#variationsContainer').append(newRow);
-                variationCount++;
-            });
+                // ✅ Initialize Select2 for the new tax rate dropdown
+            setTimeout(() => {
+                $(`select[name="variations[${variationCount}][tax_rate_id][]"]`).select2({
+                    placeholder: "Select Tax Rate(s)",
+                    allowClear: true,
+                    width: '100%'
+                });
+            }, 100);
+            
+            variationCount++;
+        });
 
             // Remove Variation Row
             $(document).on('click', '.remove-variation-row', function () {
@@ -1135,6 +1206,21 @@
                 let isValid = true;
                 let firstErrorElement = null;
 
+                // ✅ Validate tax rates
+            $('.tax-rate-select').each(function() {
+                const selected = $(this).val();
+                if (!selected || selected.length === 0) {
+                    const fieldName = $(this).attr('name').replace('[]', '');
+                    $(this).addClass('is-invalid');
+                    $(`#error-${fieldName}`).text('At least one tax rate must be selected');
+                    isValid = false;
+                    
+                    if (!firstErrorElement) {
+                        firstErrorElement = this;
+                    }
+                }
+            });
+
                 // Validate required fields
                 $('#productForm :input[required]:visible').each(function() {
                     if (!$(this).val()) {
@@ -1165,6 +1251,17 @@
                 
                 // Create FormData and add all form inputs
                 const formData = new FormData(this);
+
+                 // ✅ Add tax rate arrays properly
+            $('.tax-rate-select').each(function(index) {
+                const values = $(this).val();
+                const name = $(this).attr('name');
+                if (values && values.length > 0) {
+                    values.forEach(value => {
+                        formData.append(name, value);
+                    });
+                }
+            });
                 
                 $.ajax({
                     url: $(this).attr('action'),
@@ -1485,3 +1582,5 @@
 });
     </script>
 @endsection
+
+

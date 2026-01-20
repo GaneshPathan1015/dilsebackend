@@ -1192,6 +1192,8 @@
                             <span><strong>${{ number_format($order->grand_total, 2) }}</strong></span>
                         </div>
                     </div>
+
+                    
                 </div>
 
                 <div class="invoice-footer">
