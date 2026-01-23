@@ -29,12 +29,14 @@ class ProductVariation extends Model
         'vendor_id',
         'parent_category_id',
         'is_best_selling',
-        'tax_rate_id',
+        // 'tax_rate_id',
     ];
     
     protected $casts = [
         'images' => 'array',
     ];
+        protected $appends = ['video_url', 'tax_rate_names', 'tax_rate_ids', 'total_tax_rate'];
+
 
     public function getCurrentMetalPrice()
     {
@@ -187,27 +189,33 @@ class ProductVariation extends Model
     {
         return $this->belongsTo(DiamondQualityGroup::class, 'diamond_quality_id', 'dqg_id');
     }
-    public function taxRate()
-    {
-        return $this->belongsTo(TaxRate::class);
-    }
-
-    // ✅ New many-to-many relationship with TaxRate
     public function taxRates() 
     {
         return $this->belongsToMany(TaxRate::class, 'product_variation_tax_rate');
     }
 
-    // ✅ Get formatted tax rate names
     public function getTaxRateNamesAttribute()
     {
         return $this->taxRates->pluck('name')->implode(', ');
     }
-
-    // ✅ Get tax rate IDs
     public function getTaxRateIdsAttribute()
     {
         return $this->taxRates->pluck('id')->toArray();
+    }
+
+    public function getTotalTaxRateAttribute()
+    {
+        return $this->taxRates->sum('rate');
+    }
+
+    public function getTaxAmountAttribute()
+    {
+        return ($this->price * $this->total_tax_rate) / 100;
+    }
+
+    public function getPriceWithTaxAttribute()
+    {
+        return $this->price + $this->tax_amount;
     }
 }
 

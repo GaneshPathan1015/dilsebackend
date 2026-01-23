@@ -12,6 +12,7 @@ use App\Models\Coupon;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
+use App\Jobs\ProcessOrderEmailsJob;
 
 
 
@@ -314,105 +315,219 @@ class OrderController extends Controller
         return response()->json($summary);
     }
 
+    // public function store(Request $request)
+    // {
+    //     Log::info('🔄 ======= API ORDER CREATION STARTED =======');
+    //     Log::info('📝 Request Data:', $request->all());
+
+    //     try {
+    //         // Step 1: Validate Request
+    //         $validator = Validator::make($request->all(), [
+    //             'user_id'        => 'required|exists:users,id',
+    //             'user_name'      => 'required|string|max:255',
+    //             'contact_number' => 'required|string|max:20',
+    //             'item_details'   => 'required|json',
+    //             'total_price'    => 'required|numeric|min:0',
+    //             'address'        => 'required|json',
+    //             'billing_address' => 'nullable|json',
+    //             'order_status'   => 'required|string|in:pending,processing,confirmed',
+    //             'payment_mode'   => 'required|string|in:cod,online,card,wallet',
+    //             'payment_status' => 'required|string|in:pending,paid,failed',
+    //             'transaction_id' => 'nullable|string',
+    //             'razorpay_payment_id' => 'nullable|string',
+    //             'razorpay_order_id' => 'nullable|string',
+    //             'is_gift'        => 'nullable|boolean',
+    //             'notes'          => 'nullable|string|max:500',
+    //             'coupon_discount' => 'nullable|numeric|min:0',
+    //             'coupon_code'    => 'nullable|string|max:50',
+    //             'product_type'   => 'required|string',
+    //             'total_quantity' => 'required|integer|min:1'
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             Log::error('❌ Validation failed:', $validator->errors()->toArray());
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'message' => 'Validation failed',
+    //                 'errors' => $validator->errors()
+    //             ], 422);
+    //         }
+
+    //         $validated = $validator->validated();
+
+    //         // Generate unique Order ID
+    //         $validated['order_id'] = 'TCC' . date('YmdHis') . strtoupper(Str::random(4));
+
+    //         // Set default values
+    //         if (empty($validated['billing_address'])) {
+    //             $validated['billing_address'] = $validated['address'];
+    //         }
+
+    //         // Set items_id and quantities (can be empty arrays)
+    //         $validated['items_id'] = json_encode([]);
+    //         $validated['quantities'] = json_encode(['total' => $validated['total_quantity']]);
+
+    //         Log::info('✅ Validation passed, preparing order data...');
+    //         Log::info('📦 Order ID generated: ' . $validated['order_id']);
+
+    //         // ✅ IMPORTANT: CREATE ORDER WITHOUT DB TRANSACTION FIRST
+    //         $order = Order::create($validated);
+
+    //         Log::info('🎉 Order created successfully in database: ' . $order->id);
+    //         Log::info('📊 Order Details:', [
+    //             'order_id' => $order->order_id,
+    //             'user_id' => $order->user_id,
+    //             'total_price' => $order->total_price,
+    //             'payment_mode' => $order->payment_mode
+    //         ]);
+    //         // ✅ Queue में email job dispatch करें
+    //         ProcessOrderEmailsJob::dispatch($order)
+    //             ->delay(now()->addSeconds(2)) // 2 second initial delay
+    //             ->onQueue('emails');
+
+    //         // ✅ NOW SEND EMAILS AFTER SUCCESSFUL ORDER CREATION
+    //         $emailResult = $this->sendOrderEmailsImmediately($order);
+
+    //         Log::info('📧 Email sending result: ' . ($emailResult ? 'SUCCESS' : 'FAILED'));
+    //         Log::info('✅ ======= ORDER CREATION COMPLETED =======');
+
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'message' => 'Order created successfully!',
+    //             'order_id' => $order->order_id,
+    //             'order' => $order,
+    //             'email_sent' => $emailResult
+    //         ], 201);
+    //     } catch (\Exception $e) {
+    //         Log::error('❌ ORDER CREATION FAILED: ' . $e->getMessage());
+    //         Log::error('🔍 Error Trace: ' . $e->getTraceAsString());
+
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'message' => 'Failed to create order',
+    //             'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
+    //         ], 500);
+    //     }
+    // }
     public function store(Request $request)
-    {
-        Log::info('🔄 ======= API ORDER CREATION STARTED =======');
-        Log::info('📝 Request Data:', $request->all());
+{
+    Log::info('🔄 ======= API ORDER CREATION STARTED =======');
+    Log::info('📝 Request Data:', $request->all());
 
-        try {
-            // Step 1: Validate Request
-            $validator = Validator::make($request->all(), [
-                'user_id'        => 'required|exists:users,id',
-                'user_name'      => 'required|string|max:255',
-                'contact_number' => 'required|string|max:20',
-                'item_details'   => 'required|json',
-                'total_price'    => 'required|numeric|min:0',
-                'address'        => 'required|json',
-                'billing_address' => 'nullable|json',
-                'order_status'   => 'required|string|in:pending,processing,confirmed',
-                'payment_mode'   => 'required|string|in:cod,online,card,wallet',
-                'payment_status' => 'required|string|in:pending,paid,failed',
-                'transaction_id' => 'nullable|string',
-                'razorpay_payment_id' => 'nullable|string',
-                'razorpay_order_id' => 'nullable|string',
-                'is_gift'        => 'nullable|boolean',
-                'notes'          => 'nullable|string|max:500',
-                'coupon_discount' => 'nullable|numeric|min:0',
-                'coupon_code'    => 'nullable|string|max:50',
-                'product_type'   => 'required|string',
-                'total_quantity' => 'required|integer|min:1'
-            ]);
+    try {
+        // Step 1: Validate Request
+        $validator = Validator::make($request->all(), [
+            'user_id'        => 'required|exists:users,id',
+            'user_name'      => 'required|string|max:255',
+            'contact_number' => 'required|string|max:20',
+            'item_details'   => 'required|json',
+            'total_price'    => 'required|numeric|min:0',
+            'address'        => 'required|json',
+            'billing_address' => 'nullable|json',
+            'order_status'   => 'required|string|in:pending,processing,confirmed',
+            'payment_mode'   => 'required|string|in:cod,online,card,wallet',
+            'payment_status' => 'required|string|in:pending,paid,failed',
+            'transaction_id' => 'nullable|string',
+            'razorpay_payment_id' => 'nullable|string',
+            'razorpay_order_id' => 'nullable|string',
+            'is_gift'        => 'nullable|boolean',
+            'notes'          => 'nullable|string|max:500',
+            'coupon_discount' => 'nullable|numeric|min:0',
+            'coupon_code'    => 'nullable|string|max:50',
+            'product_type'   => 'required|string',
+            'total_quantity' => 'required|integer|min:1'
+        ]);
 
-            if ($validator->fails()) {
-                Log::error('❌ Validation failed:', $validator->errors()->toArray());
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
-
-            $validated = $validator->validated();
-
-            // Generate unique Order ID
-            $validated['order_id'] = 'TCC' . date('YmdHis') . strtoupper(Str::random(4));
-
-            // Set default values
-            if (empty($validated['billing_address'])) {
-                $validated['billing_address'] = $validated['address'];
-            }
-
-            // Set items_id and quantities (can be empty arrays)
-            $validated['items_id'] = json_encode([]);
-            $validated['quantities'] = json_encode(['total' => $validated['total_quantity']]);
-
-            Log::info('✅ Validation passed, preparing order data...');
-            Log::info('📦 Order ID generated: ' . $validated['order_id']);
-
-            // ✅ IMPORTANT: CREATE ORDER WITHOUT DB TRANSACTION FIRST
-            $order = Order::create($validated);
-
-            Log::info('🎉 Order created successfully in database: ' . $order->id);
-            Log::info('📊 Order Details:', [
-                'order_id' => $order->order_id,
-                'user_id' => $order->user_id,
-                'total_price' => $order->total_price,
-                'payment_mode' => $order->payment_mode
-            ]);
-
-            // ✅ NOW SEND EMAILS AFTER SUCCESSFUL ORDER CREATION
-            $emailResult = $this->sendOrderEmailsImmediately($order);
-
-            Log::info('📧 Email sending result: ' . ($emailResult ? 'SUCCESS' : 'FAILED'));
-            Log::info('✅ ======= ORDER CREATION COMPLETED =======');
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Order created successfully!',
-                'order_id' => $order->order_id,
-                'order' => $order,
-                'email_sent' => $emailResult
-            ], 201);
-        } catch (\Exception $e) {
-            Log::error('❌ ORDER CREATION FAILED: ' . $e->getMessage());
-            Log::error('🔍 Error Trace: ' . $e->getTraceAsString());
-
+        if ($validator->fails()) {
+            Log::error('❌ Validation failed:', $validator->errors()->toArray());
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to create order',
-                'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
         }
+
+        $validated = $validator->validated();
+
+        // Generate unique Order ID
+        $validated['order_id'] = 'TCC' . date('YmdHis') . strtoupper(Str::random(4));
+
+        // Set default values
+        if (empty($validated['billing_address'])) {
+            $validated['billing_address'] = $validated['address'];
+        }
+
+        // Set items_id and quantities (can be empty arrays)
+        $validated['items_id'] = json_encode([]);
+        $validated['quantities'] = json_encode(['total' => $validated['total_quantity']]);
+
+        Log::info('✅ Validation passed, preparing order data...');
+        Log::info('📦 Order ID generated: ' . $validated['order_id']);
+
+        // ✅ CREATE ORDER
+        $order = Order::create($validated);
+
+        Log::info('🎉 Order created successfully in database: ' . $order->id);
+        Log::info('📊 Order Details:', [
+            'order_id' => $order->order_id,
+            'user_id' => $order->user_id,
+            'total_price' => $order->total_price,
+            'payment_mode' => $order->payment_mode
+        ]);
+
+        // ✅ OPTION 1: WITH QUEUE (Recommended for Mailtrap)
+        // Queue में email job dispatch करें
+        Log::info('📧 Dispatching email job to queue...');
+        
+        // Import at top: use App\Jobs\ProcessOrderEmailsJob;
+        ProcessOrderEmailsJob::dispatch($order)
+            ->delay(now()->addSeconds(5)) // 5 second delay for rate limiting
+            ->onQueue('emails');
+        
+        Log::info('✅ Email job dispatched to queue');
+        $emailStatus = 'queued';
+
+        /*
+        // ✅ OPTION 2: WITHOUT QUEUE (With Delay)
+        // सीधे email भेजें (queue के बिना)
+        Log::info('📧 Sending emails with delay for Mailtrap rate limit...');
+        
+        // 5 सेकंड wait करें rate limit के लिए
+        sleep(5);
+        
+        $emailResult = $this->sendOrderEmailsImmediately($order);
+        Log::info('📧 Email sending result: ' . ($emailResult ? 'SUCCESS' : 'FAILED'));
+        $emailStatus = $emailResult ? 'sent' : 'failed';
+        */
+
+        Log::info('✅ ======= ORDER CREATION COMPLETED =======');
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Order created successfully!',
+            'order_id' => $order->order_id,
+            'order' => $order,
+            'email_status' => $emailStatus,
+            'note' => $emailStatus === 'queued' ? 'Emails will be sent shortly via queue' : 'Emails sent immediately'
+        ], 201);
+    } catch (\Exception $e) {
+        Log::error('❌ ORDER CREATION FAILED: ' . $e->getMessage());
+        Log::error('🔍 Error Trace: ' . $e->getTraceAsString());
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to create order',
+            'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
+        ], 500);
     }
+}
 
     private function sendOrderEmailsImmediately(Order $order)
     {
         Log::info('📧 ======= SENDING ORDER EMAILS STARTED =======');
 
         try {
-
             $customerEmail = $this->getCustomerEmail($order);
-
             $adminEmail = $this->getAdminEmail();
 
             Log::info('👤 Customer Email: ' . ($customerEmail ?? 'NOT FOUND'));
@@ -420,11 +535,15 @@ class OrderController extends Controller
 
             $emailSentCount = 0;
 
+            // Check Mailtrap rate limit (2 emails per 10 seconds)
+            // We'll send one email every 6 seconds to be safe
+
+            // Send admin email first
             if ($adminEmail) {
                 $adminSent = $this->sendSingleEmail(
                     $adminEmail,
                     'admin.DiamondMaster.emails.order_notification',
-                    '🆕 New Order Recive - ' . $order->order_id . ' - The Carat Casa',
+                    '🆕 New Order Received - ' . $order->order_id . ' - The Carat Casa',
                     $order,
                     'admin'
                 );
@@ -433,13 +552,18 @@ class OrderController extends Controller
                     $emailSentCount++;
                     Log::info('✅ Admin email sent successfully');
                 }
+
+                // Wait 6 seconds for Mailtrap rate limit
+                Log::info('⏳ Waiting 6 seconds for Mailtrap rate limit...');
+                sleep(6);
             }
 
+            // Send customer email after delay
             if ($customerEmail) {
                 $customerSent = $this->sendSingleEmail(
                     $customerEmail,
                     'admin.DiamondMaster.emails.order_confirmation',
-                    '✅ Your Confirm Order - #' . $order->order_id . ' - The Carat Casa',
+                    '✅ Order Confirmation - #' . $order->order_id . ' - The Carat Casa',
                     $order,
                     'customer'
                 );
@@ -464,32 +588,54 @@ class OrderController extends Controller
     private function sendSingleEmail($toEmail, $view, $subject, $order, $type)
     {
         try {
-            // Prepare email data
             $emailData = $this->prepareEmailData($order, $type);
 
-            // Send email
-            Mail::send($view, $emailData, function ($message) use ($toEmail, $subject, $order, $type) {
-                $message->to($toEmail)
-                    ->subject($subject);
+            Mail::send($view, $emailData, function ($message) use ($toEmail, $subject, $type) {
+                $message->to($toEmail)->subject($subject);
 
                 if ($type === 'admin') {
                     $message->cc(env('SALES_EMAIL', 'sales@thecaratcasa.com'));
                 }
             });
 
-            // Check for failures
-            if (Mail::failures()) {
-                Log::warning('⚠️ Mail failures for ' . $type . ' email: ' . json_encode(Mail::failures()));
-                return false;
-            }
-
-            Log::info('📨 ' . ucfirst($type) . ' email sent to: ' . $toEmail);
+            // ❌ Mail::failures() REMOVE
             return true;
         } catch (\Exception $e) {
-            Log::error('❌ Error sending ' . $type . ' email: ' . $e->getMessage());
+            Log::error("Email send failed ({$type}): " . $e->getMessage());
             return false;
         }
     }
+
+
+    // private function sendSingleEmail($toEmail, $view, $subject, $order, $type)
+    // {
+    //     try {
+    //         // Prepare email data
+    //         $emailData = $this->prepareEmailData($order, $type);
+
+    //         // Send email
+    //         Mail::send($view, $emailData, function ($message) use ($toEmail, $subject, $order, $type) {
+    //             $message->to($toEmail)
+    //                 ->subject($subject);
+
+    //             if ($type === 'admin') {
+    //                 $message->cc(env('SALES_EMAIL', 'sales@thecaratcasa.com'));
+    //             }
+    //         });
+
+    //         // Check for failures
+    //         if (Mail::failures()) {
+    //             Log::warning('⚠️ Mail failures for ' . $type . ' email: ' . json_encode(Mail::failures()));
+    //             return false;
+    //         }
+
+    //         Log::info('📨 ' . ucfirst($type) . ' email sent to: ' . $toEmail);
+    //         return true;
+    //     } catch (\Exception $e) {
+    //         Log::error('❌ Error sending ' . $type . ' email: ' . $e->getMessage());
+    //         return false;
+    //     }
+    // }
 
     private function getCustomerEmail(Order $order)
     {

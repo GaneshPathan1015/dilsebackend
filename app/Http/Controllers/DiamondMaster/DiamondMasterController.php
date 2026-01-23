@@ -256,8 +256,8 @@ class DiamondMasterController extends Controller
     public function store(Request $request)
     {
         $rules = [
-                    'tax_rate_id' => 'nullable|array', // ✅ Change to array validation
-        'tax_rate_id.*' => 'exists:tax_rates,id', // ✅ Add array element validation
+            'tax_rate_id' => 'nullable|array', // ✅ Change to array validation
+            'tax_rate_id.*' => 'exists:tax_rates,id', // ✅ Add array element validation
             'diamond_type' => 'required|in:1,2',
             'quantity' => 'required|integer|min:1',
             'vendor_id' => 'required|exists:vendor_master,vendorid',
@@ -528,9 +528,6 @@ class DiamondMasterController extends Controller
         }
     }
 
-    /**
-     * Import diamonds from Excel
-     */
     /**
      * Import diamonds from Excel
      */
