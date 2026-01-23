@@ -189,37 +189,30 @@ class ProductVariation extends Model
     {
         return $this->belongsTo(DiamondQualityGroup::class, 'diamond_quality_id', 'dqg_id');
     }
-     // ✅ नया many-to-many relationship TaxRate के साथ
     public function taxRates() 
     {
         return $this->belongsToMany(TaxRate::class, 'product_variation_tax_rate');
     }
 
-    // ✅ Tax rate names लाने के लिए
     public function getTaxRateNamesAttribute()
     {
         return $this->taxRates->pluck('name')->implode(', ');
     }
-
-    // ✅ Tax rate IDs लाने के लिए
     public function getTaxRateIdsAttribute()
     {
         return $this->taxRates->pluck('id')->toArray();
     }
 
-    // ✅ Total tax percentage calculate करने के लिए
     public function getTotalTaxRateAttribute()
     {
         return $this->taxRates->sum('rate');
     }
 
-    // ✅ Tax amount calculate करने के लिए
     public function getTaxAmountAttribute()
     {
         return ($this->price * $this->total_tax_rate) / 100;
     }
 
-    // ✅ Price with tax calculate करने के लिए
     public function getPriceWithTaxAttribute()
     {
         return $this->price + $this->tax_amount;
