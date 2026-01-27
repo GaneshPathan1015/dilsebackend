@@ -15,6 +15,7 @@ class ProductVariation extends Model
         'carat',  
         'price', 
         'regular_price',
+        'making_charges',
         'sku', 
         'images',
         'video',
@@ -29,13 +30,35 @@ class ProductVariation extends Model
         'vendor_id',
         'parent_category_id',
         'is_best_selling',
-        // 'tax_rate_id',
     ];
     
     protected $casts = [
         'images' => 'array',
+        'making_charges' => 'decimal:2',
+        'price' => 'decimal:2',
+        'regular_price' => 'decimal:2',
+        'diamond_weight' => 'decimal:2',
+        'weight' => 'decimal:2',
     ];
-        protected $appends = ['video_url', 'tax_rate_names', 'tax_rate_ids', 'total_tax_rate'];
+    
+    protected $appends = [
+        'video_url', 
+        'tax_rate_names', 
+        'tax_rate_ids', 
+        'total_tax_rate',
+        'gold_gst_amount',
+        'diamond_gst_amount',
+        'making_gst_amount',
+        'gold_gst_rate',
+        'diamond_gst_rate',
+        'making_gst_rate',
+        'total_gst_amount',
+        'price_without_gst',
+        'making_without_gst',
+        'gst_breakdown',
+        'formatted_gst_details',
+    ];
+
 
 
     public function getCurrentMetalPrice()
@@ -208,14 +231,161 @@ class ProductVariation extends Model
         return $this->taxRates->sum('rate');
     }
 
-    public function getTaxAmountAttribute()
+    public function getGstRateByType($type)
     {
-        return ($this->price * $this->total_tax_rate) / 100;
+        $taxRate = $this->taxRates->where('code', $type)->first();
+        return $taxRate ? $taxRate->rate : 0;
     }
 
+     // ✅ Get GST Rate by Type
+    private function getGstRateByCode($code)
+    {
+        $taxRate = $this->taxRates->where('code', $code)->first();
+        return $taxRate ? $taxRate->rate : 0;
+    }
+
+    // ✅ Gold GST Amount
+    public function getGoldGstAmountAttribute()
+    {
+        $goldRate = $this->getGstRateByCode('GST_GOLD');
+        return round(($this->price * $goldRate) / 100, 2);
+    }
+
+    // ✅ Diamond GST Amount
+    public function getDiamondGstAmountAttribute()
+    {
+        $diamondRate = $this->getGstRateByCode('GST_DIAMOND');
+        return round(($this->price * $diamondRate) / 100, 2);
+    }
+
+    // ✅ Making GST Amount
+    public function getMakingGstAmountAttribute()
+    {
+        $makingRate = $this->getGstRateByCode('GST_MAKING');
+        $makingCharges = $this->making_charges ?? 0;
+        return round(($makingCharges * $makingRate) / 100, 2);
+    }
+
+    // ✅ Total GST Amount
+    public function getTotalGstAmountAttribute()
+    {
+        return round(
+            $this->gold_gst_amount + 
+            $this->diamond_gst_amount + 
+            $this->making_gst_amount, 
+        2);
+    }
+
+    // ✅ Gold GST Rate
+    public function getGoldGstRateAttribute()
+    {
+        return $this->getGstRateByCode('GST_GOLD');
+    }
+
+    // ✅ Diamond GST Rate
+    public function getDiamondGstRateAttribute()
+    {
+        return $this->getGstRateByCode('GST_DIAMOND');
+    }
+
+    // ✅ Making GST Rate
+    public function getMakingGstRateAttribute()
+    {
+        return $this->getGstRateByCode('GST_MAKING');
+    }
+
+    // ✅ Price without GST
+    public function getPriceWithoutGstAttribute()
+    {
+        return $this->price;
+    }
+
+    // ✅ Making without GST
+    public function getMakingWithoutGstAttribute()
+    {
+        return $this->making_charges ?? 0;
+    }
+
+    // ✅ Total without GST
+    public function getTotalWithoutGstAttribute()
+    {
+        return $this->price + ($this->making_charges ?? 0);
+    }
+
+    // ✅ Price with Tax
     public function getPriceWithTaxAttribute()
     {
-        return $this->price + $this->tax_amount;
+        return $this->total_without_gst + $this->total_gst_amount;
     }
+
+    // ✅ Tax Amount (for backward compatibility)
+    public function getTaxAmountAttribute()
+    {
+        return $this->total_gst_amount;
+    }
+
+    // ✅ नया: GST Breakdown Array
+    public function getGstBreakdownAttribute()
+    {
+        return [
+            [
+                'type' => 'gold',
+                'name' => 'Gold GST',
+                'rate' => $this->gold_gst_rate,
+                'rate_formatted' => number_format($this->gold_gst_rate, 2) . '%',
+                'base_amount' => $this->price,
+                'gst_amount' => $this->gold_gst_amount,
+                'formatted' => "Gold GST (" . number_format($this->gold_gst_rate, 2) . "%): ₹" . number_format($this->gold_gst_amount, 2),
+                'calculation' => "₹" . number_format($this->price, 2) . " × " . number_format($this->gold_gst_rate, 2) . "% = ₹" . number_format($this->gold_gst_amount, 2)
+            ],
+            [
+                'type' => 'diamond',
+                'name' => 'Diamond GST',
+                'rate' => $this->diamond_gst_rate,
+                'rate_formatted' => number_format($this->diamond_gst_rate, 2) . '%',
+                'base_amount' => $this->price,
+                'gst_amount' => $this->diamond_gst_amount,
+                'formatted' => "Diamond GST (" . number_format($this->diamond_gst_rate, 2) . "%): ₹" . number_format($this->diamond_gst_amount, 2),
+                'calculation' => "₹" . number_format($this->price, 2) . " × " . number_format($this->diamond_gst_rate, 2) . "% = ₹" . number_format($this->diamond_gst_amount, 2)
+            ],
+            [
+                'type' => 'making',
+                'name' => 'Making Charges GST',
+                'rate' => $this->making_gst_rate,
+                'rate_formatted' => number_format($this->making_gst_rate, 2) . '%',
+                'base_amount' => $this->making_charges ?? 0,
+                'gst_amount' => $this->making_gst_amount,
+                'formatted' => "Making GST (" . number_format($this->making_gst_rate, 2) . "%): ₹" . number_format($this->making_gst_amount, 2),
+                'calculation' => "₹" . number_format($this->making_charges ?? 0, 2) . " × " . number_format($this->making_gst_rate, 2) . "% = ₹" . number_format($this->making_gst_amount, 2)
+            ]
+        ];
+    }
+
+    // ✅ नया: Formatted GST Details String
+    public function getFormattedGstDetailsAttribute()
+    {
+        $details = [];
+        
+        // Gold GST
+        if ($this->gold_gst_amount > 0) {
+            $details[] = "Gold GST (" . number_format($this->gold_gst_rate, 2) . "%): ₹" . number_format($this->gold_gst_amount, 2);
+        }
+        
+        // Diamond GST
+        if ($this->diamond_gst_amount > 0) {
+            $details[] = "Diamond GST (" . number_format($this->diamond_gst_rate, 2) . "%): ₹" . number_format($this->diamond_gst_amount, 2);
+        }
+        
+        // Making GST
+        if ($this->making_gst_amount > 0) {
+            $details[] = "Making GST (" . number_format($this->making_gst_rate, 2) . "%): ₹" . number_format($this->making_gst_amount, 2);
+        }
+        
+        // Total GST
+        $details[] = "Total GST: ₹" . number_format($this->total_gst_amount, 2);
+        
+        return implode(" | ", $details);
+    }
+
 }
 

@@ -128,11 +128,11 @@
                 <li class="menu-item {{ request()->routeIs('product-cut.index') ? 'active' : '' }}">
                     <a href="{{ route('product-cut.index') }}" class="menu-link">Product Cut</a>
                 </li>
-                <li class="menu-item {{ request()->routeIs('tax-classes.index') ? 'active' : '' }}">
+                {{-- <li class="menu-item {{ request()->routeIs('tax-classes.index') ? 'active' : '' }}">
                     <a href="{{ route('tax-classes.index') }}" class="menu-link">Shop Tax Class</a>
-                </li>
-                {{-- <li class="menu-item {{ request()->routeIs('tax-rates.index') ? 'active' : '' }}">
-                    <a href="{{ route('tax-rates.index') }}" class="menu-link">Shop Tax Rate</a>
+                </li> --}}
+                {{-- <li class="menu-item {{ request()->routeIs('admin.tax-rates.index') ? 'active' : '' }}">
+                    <a href="{{ route('admin.tax-rates.index') }}" class="menu-link">Shop Tax Rate</a>
                 </li> --}}
                 <li class="menu-item {{ request()->routeIs('product-style-category.index') ? 'active' : '' }}">
                     <a href="{{ route('product-style-category.index') }}" class="menu-link">Product Style Category</a>
@@ -208,6 +208,14 @@
             <a href="{{ route('enquiries.index') }}" class="menu-link">
                 <i class="menu-icon fa fa-comment-dots"></i>
                 <div class="text-truncate">Enquiries</div>
+            </a>
+        </li>
+
+        <!-- Tax & Makiing Charges -->
+        <li class="menu-item {{ request()->routeIs('admin.tax-rates.index') ? 'active' : '' }}">
+            <a href="{{ route('admin.tax-rates.index') }}" class="menu-link">
+                <i class="menu-icon fa fa-receipt"></i>
+                <div class="text-truncate">Tax & Makiing Charges</div>
             </a>
         </li>
 

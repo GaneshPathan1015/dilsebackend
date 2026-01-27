@@ -128,7 +128,7 @@
             overflow: hidden;
         }
 
-        /* Add to your existing CSS */
+         /* Add to your existing CSS */
 .select2-container--default .select2-selection--multiple {
     border: 1px solid #ddd;
     border-radius: 3px;
@@ -137,11 +137,12 @@
 
 .select2-container--default .select2-selection--multiple .select2-selection__rendered {
     padding: 2px 10px;
+    display: table-cell !important;
 }
 
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background-color: #007bff;
-    border: 1px solid #007bff;
+    background-color: #0a0a0a !important;
+    border: 1px solid #0a0a0a !important;
     color: white;
     padding: 2px 8px;
     margin-top: 4px;
@@ -668,6 +669,16 @@
                                                         class="form-control" required placeholder="0.00">
                                                     <div class="error-message" id="error-variations-{{ $i }}-regular_price"></div>
                                                 </div>
+
+                                                <!-- ✅ Making Charges Field -->
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Making Charges</label>
+                                                    <input type="number" step="0.01" 
+                                                        name="variations[{{ $i }}][making_charges]" 
+                                                        class="form-control making-charges" 
+                                                        placeholder="0.00" 
+                                                        value="{{ old("variations.$i.making_charges", $variation->making_charges ?? 0) }}">
+                                                </div>
                                                 
                                                 <div class="col-md-3">
                                                     <label class="form-label">Stock</label>
@@ -694,19 +705,19 @@
                                                 </div>
 
                                                  <!-- ✅ Tax Rate Dropdown - MULTIPLE SELECT -->
-<div class="col-md-3">
-    <label class="form-label">Tax Rate *</label>
-    <select name="variations[{{ $i }}][tax_rate_id][]" class="form-select tax-rate-select" multiple="multiple" style="width: 100%;">
-        @foreach($taxRates as $taxRate)
-            <option value="{{ $taxRate->id }}" 
-                @if(isset($variation) && $variation->taxRates->contains($taxRate->id)) selected @endif>
-                {{ $taxRate->name }} ({{ $taxRate->rate }}%)
-            </option>
-        @endforeach
-    </select>
-    <div class="error-message" id="error-variations-{{ $i}}-tax_rate_id"></div>
-</div>
-                                                
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Tax Rate *</label>
+                                                    <select name="variations[{{ $i }}][tax_rate_id][]" class="form-select tax-rate-select" multiple="multiple" style="width: 100%;">
+                                                        @foreach($taxRates as $taxRate)
+                                                            <option value="{{ $taxRate->id }}" 
+                                                                @if(isset($variation) && $variation->taxRates->contains($taxRate->id)) selected @endif>
+                                                                {{ $taxRate->name }} ({{ $taxRate->rate }}%)
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                    <div class="error-message" id="error-variations-{{ $i}}-tax_rate_id"></div>  
+                                                </div>
+                                           
                                                 <div class="col-md-3">
                                                     <label class="form-label">Best Selling</label>
                                                     <div class="form-check mt-2">
@@ -1057,8 +1068,9 @@
         let isSubmitting = false;
         let removedImageIndexes = {};             
         let removedExistingImages = {};
-
         // Add new variation row
+
+        
         $('#addVariationRow').click(function (e) {
             e.preventDefault();
             const newRow = `
@@ -1104,6 +1116,13 @@
                         <label class="form-label">Regular Price</label>
                         <input type="number" step="0.01" name="variations[${variationCount}][regular_price]" class="form-control" required placeholder="0.00">
                         <div class="error-message" id="error-variations-${variationCount}-regular_price"></div>
+                    </div>
+
+                    <!-- ✅ Making Charges Field -->
+                    <div class="col-md-3">
+                        <label class="form-label">Making Charges</label>
+                        <input type="number" step="0.01" name="variations[${variationCount}][making_charges]" 
+                            class="form-control making-charges" placeholder="0.00" value="0">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Stock</label>
