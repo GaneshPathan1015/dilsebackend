@@ -2522,7 +2522,8 @@ class ProductController extends Controller
                 $q->select('category_id', 'category_name', 'parent_id')->with('parent:category_id,category_name');
             },
             'variations.metalColor',
-            'variations.taxRates:id,name,rate' // ✅ Added tax rates
+             // ✅ Added tax rates
+            'variations.taxRates:id,name,rate,code' 
         ])
             ->whereIn('products_id', $sortedProductIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $sortedProductIds->toArray()) . ')')
@@ -2578,14 +2579,29 @@ class ProductController extends Controller
                     ] : null,
                     'weight' => $variation->weight,
                     'images' => $variation->images,
-                    // ✅ Added tax rates to variation
                     'tax_rates' => $variation->taxRates->map(function($taxRate) {
                         return [
                             'id' => $taxRate->id,
                             'name' => $taxRate->name,
-                            'rate' => $taxRate->rate
+                            'rate' => $taxRate->rate,
+                            'code' => $taxRate->code 
                         ];
                     }),
+                    // ✅ GST amounts and details
+                    'total_tax_rate' => $variation->total_tax_rate,
+                    'gold_gst_amount' => $variation->gold_gst_amount,
+                    'diamond_gst_amount' => $variation->diamond_gst_amount,
+                    'making_gst_amount' => $variation->making_gst_amount,
+                    'gold_gst_rate' => $variation->gold_gst_rate,
+                    'diamond_gst_rate' => $variation->diamond_gst_rate,
+                    'making_gst_rate' => $variation->making_gst_rate,
+                    'total_gst_amount' => $variation->total_gst_amount,
+                    'price_without_gst' => $variation->price_without_gst,
+                    'making_without_gst' => $variation->making_without_gst,
+                    'tax_amount' => $variation->tax_amount,
+                    'price_with_tax' => $variation->price_with_tax,
+                    'gst_breakdown' => $variation->gst_breakdown,
+                    'formatted_gst_details' => $variation->formatted_gst_details,
                     'category' => $category ? [
                         'id' => $category->category_id,
                         'name' => $category->category_name,
@@ -2667,7 +2683,7 @@ class ProductController extends Controller
                 $query->select('id', 'name', 'image');
             },
             'variations.diamondQualityGroup:dqg_id,dqg_name',
-            'variations.taxRates:id,name,rate', // ✅ Added tax rates
+            'variations.taxRates:id,name,rate,code', // ✅ Added tax rates
             'diamondCut:id,name',
             'stone:pst_id,pst_name',
             'productClarity:id,name',
@@ -2721,14 +2737,30 @@ class ProductController extends Controller
                 'diamond_weight' => $variation->diamond_weight,
                 'images' => $variation->images,
                 'video' => $variation->video ? asset('storage/variation_videos/' . $variation->video) : null,
-                // ✅ Added tax rates to variation
+                 // ✅ Added tax rates to variation
                 'tax_rates' => $variation->taxRates->map(function($taxRate) {
                     return [
                         'id' => $taxRate->id,
                         'name' => $taxRate->name,
-                        'rate' => $taxRate->rate
+                        'rate' => $taxRate->rate,
+                        'code' => $taxRate->code 
                     ];
                 }),
+                // ✅ GST amounts and details
+                'total_tax_rate' => $variation->total_tax_rate,
+                'gold_gst_amount' => $variation->gold_gst_amount,
+                'diamond_gst_amount' => $variation->diamond_gst_amount,
+                'making_gst_amount' => $variation->making_gst_amount,
+                'gold_gst_rate' => $variation->gold_gst_rate,
+                'diamond_gst_rate' => $variation->diamond_gst_rate,
+                'making_gst_rate' => $variation->making_gst_rate,
+                'total_gst_amount' => $variation->total_gst_amount,
+                'price_without_gst' => $variation->price_without_gst,
+                'making_without_gst' => $variation->making_without_gst,
+                'tax_amount' => $variation->tax_amount,
+                'price_with_tax' => $variation->price_with_tax,
+                'gst_breakdown' => $variation->gst_breakdown,
+                'formatted_gst_details' => $variation->formatted_gst_details,
                 'category' => $category ? [
                     'id' => $category->category_id,
                     'name' => $category->category_name,
@@ -2969,7 +3001,7 @@ class ProductController extends Controller
                 $q->select('category_id', 'category_name', 'parent_id')->with('parent:category_id,category_name');
             },
             'variations.metalColor',
-            'variations.taxRates:id,name,rate' // ✅ Added tax rates
+            'variations.taxRates:id,name,rate,code' // ✅ Added tax rates
         ])
             ->whereIn('products_id', $sortedProductIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $sortedProductIds->toArray()) . ')')
@@ -3015,14 +3047,30 @@ class ProductController extends Controller
                         ] : null,
                         'weight' => $variation->weight,
                         'images' => $variation->images,
-                        // ✅ Added tax rates to variation
+                         // ✅ Added tax rates to variation
                         'tax_rates' => $variation->taxRates->map(function($taxRate) {
                             return [
                                 'id' => $taxRate->id,
                                 'name' => $taxRate->name,
-                                'rate' => $taxRate->rate
+                                'rate' => $taxRate->rate,
+                                'code' => $taxRate->code 
                             ];
                         }),
+                        // ✅ GST amounts and details
+                        'total_tax_rate' => $variation->total_tax_rate,
+                        'gold_gst_amount' => $variation->gold_gst_amount,
+                        'diamond_gst_amount' => $variation->diamond_gst_amount,
+                        'making_gst_amount' => $variation->making_gst_amount,
+                        'gold_gst_rate' => $variation->gold_gst_rate,
+                        'diamond_gst_rate' => $variation->diamond_gst_rate,
+                        'making_gst_rate' => $variation->making_gst_rate,
+                        'total_gst_amount' => $variation->total_gst_amount,
+                        'price_without_gst' => $variation->price_without_gst,
+                        'making_without_gst' => $variation->making_without_gst,
+                        'tax_amount' => $variation->tax_amount,
+                        'price_with_tax' => $variation->price_with_tax,
+                        'gst_breakdown' => $variation->gst_breakdown,
+                        'formatted_gst_details' => $variation->formatted_gst_details,
                         'category' => $category ? [
                             'id' => $category->category_id,
                             'name' => $category->category_name,
@@ -3247,7 +3295,7 @@ class ProductController extends Controller
         $products = Product::with([
             'productcategory.parent',
             'variations.metalColor',
-            'variations.taxRates:id,name,rate' // ✅ Added tax rates
+            'variations.taxRates:id,name,rate,code' // ✅ Added tax rates
         ])
             ->whereIn('products_id', $productIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $productIds->toArray()) . ')')
@@ -3296,9 +3344,25 @@ class ProductController extends Controller
                             return [
                                 'id' => $taxRate->id,
                                 'name' => $taxRate->name,
-                                'rate' => $taxRate->rate
+                                'rate' => $taxRate->rate,
+                                'code' => $taxRate->code 
                             ];
                         }),
+                        // ✅ GST amounts and details
+                        'total_tax_rate' => $variation->total_tax_rate,
+                        'gold_gst_amount' => $variation->gold_gst_amount,
+                        'diamond_gst_amount' => $variation->diamond_gst_amount,
+                        'making_gst_amount' => $variation->making_gst_amount,
+                        'gold_gst_rate' => $variation->gold_gst_rate,
+                        'diamond_gst_rate' => $variation->diamond_gst_rate,
+                        'making_gst_rate' => $variation->making_gst_rate,
+                        'total_gst_amount' => $variation->total_gst_amount,
+                        'price_without_gst' => $variation->price_without_gst,
+                        'making_without_gst' => $variation->making_without_gst,
+                        'tax_amount' => $variation->tax_amount,
+                        'price_with_tax' => $variation->price_with_tax,
+                        'gst_breakdown' => $variation->gst_breakdown,
+                        'formatted_gst_details' => $variation->formatted_gst_details,
                         'category' => $category ? [
                             'id' => $category->category_id,
                             'name' => $category->category_name,
@@ -3538,7 +3602,7 @@ class ProductController extends Controller
         $products = Product::with([
             'productcategory.parent',
             'variations.metalColor',
-            'variations.taxRates:id,name,rate' // ✅ Added tax rates
+            'variations.taxRates:id,name,rate,code' // ✅ Added tax rates
         ])
             ->whereIn('products_id', $productIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $productIds->toArray()) . ')')
@@ -3593,6 +3657,21 @@ class ProductController extends Controller
                                 'rate' => $taxRate->rate
                             ];
                         }),
+                        // ✅ GST amounts and details
+                        'total_tax_rate' => $v->total_tax_rate,
+                        'gold_gst_amount' => $v->gold_gst_amount,
+                        'diamond_gst_amount' => $v->diamond_gst_amount,
+                        'making_gst_amount' => $v->making_gst_amount,
+                        'gold_gst_rate' => $v->gold_gst_rate,
+                        'diamond_gst_rate' => $v->diamond_gst_rate,
+                        'making_gst_rate' => $v->making_gst_rate,
+                        'total_gst_amount' => $v->total_gst_amount,
+                        'price_without_gst' => $v->price_without_gst,
+                        'making_without_gst' => $v->making_without_gst,
+                        'tax_amount' => $v->tax_amount,
+                        'price_with_tax' => $v->price_with_tax,
+                        'gst_breakdown' => $v->gst_breakdown,
+                        'formatted_gst_details' => $v->formatted_gst_details,
                     ];
                 });
             })->filter(fn($g) => $g->isNotEmpty());
@@ -3911,7 +3990,7 @@ class ProductController extends Controller
         $products = Product::with([
             'productcategory.parent',
             'variations.metalColor',
-            'variations.taxRates:id,name,rate' // ✅ Added tax rates
+            'variations.taxRates:id,name,rate,code' // ✅ Added tax rates
         ])
             ->whereIn('products_id', $productIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $productIds->toArray()) . ')')
@@ -3960,9 +4039,25 @@ class ProductController extends Controller
                             return [
                                 'id' => $taxRate->id,
                                 'name' => $taxRate->name,
-                                'rate' => $taxRate->rate
+                                'rate' => $taxRate->rate,
+                                'code' => $taxRate->code 
                             ];
                         }),
+                        // ✅ GST amounts and details
+                        'total_tax_rate' => $variation->total_tax_rate,
+                        'gold_gst_amount' => $variation->gold_gst_amount,
+                        'diamond_gst_amount' => $variation->diamond_gst_amount,
+                        'making_gst_amount' => $variation->making_gst_amount,
+                        'gold_gst_rate' => $variation->gold_gst_rate,
+                        'diamond_gst_rate' => $variation->diamond_gst_rate,
+                        'making_gst_rate' => $variation->making_gst_rate,
+                        'total_gst_amount' => $variation->total_gst_amount,
+                        'price_without_gst' => $variation->price_without_gst,
+                        'making_without_gst' => $variation->making_without_gst,
+                        'tax_amount' => $variation->tax_amount,
+                        'price_with_tax' => $variation->price_with_tax,
+                        'gst_breakdown' => $variation->gst_breakdown,
+                        'formatted_gst_details' => $variation->formatted_gst_details,
                         'category' => $category ? [
                             'id' => $category->category_id,
                             'name' => $category->category_name,
@@ -4231,7 +4326,7 @@ class ProductController extends Controller
         $products = Product::with([
             'productcategory.parent',
             'variations.metalColor',
-            'variations.taxRates:id,name,rate' // ✅ Added tax rates
+            'variations.taxRates:id,name,rate,code' // ✅ Added tax rates
         ])
             ->whereIn('products_id', $productIds)
             ->orderByRaw('FIELD(products_id, ' . implode(',', $productIds->toArray()) . ')')
@@ -4280,9 +4375,25 @@ class ProductController extends Controller
                             return [
                                 'id' => $taxRate->id,
                                 'name' => $taxRate->name,
-                                'rate' => $taxRate->rate
+                                'rate' => $taxRate->rate,
+                                'code' => $taxRate->code 
                             ];
                         }),
+                        // ✅ GST amounts and details
+                        'total_tax_rate' => $variation->total_tax_rate,
+                        'gold_gst_amount' => $variation->gold_gst_amount,
+                        'diamond_gst_amount' => $variation->diamond_gst_amount,
+                        'making_gst_amount' => $variation->making_gst_amount,
+                        'gold_gst_rate' => $variation->gold_gst_rate,
+                        'diamond_gst_rate' => $variation->diamond_gst_rate,
+                        'making_gst_rate' => $variation->making_gst_rate,
+                        'total_gst_amount' => $variation->total_gst_amount,
+                        'price_without_gst' => $variation->price_without_gst,
+                        'making_without_gst' => $variation->making_without_gst,
+                        'tax_amount' => $variation->tax_amount,
+                        'price_with_tax' => $variation->price_with_tax,
+                        'gst_breakdown' => $variation->gst_breakdown,
+                        'formatted_gst_details' => $variation->formatted_gst_details,
                         'category' => $category ? [
                             'id' => $category->category_id,
                             'name' => $category->category_name,
@@ -4349,7 +4460,7 @@ class ProductController extends Controller
         $product = Product::with([
             'variations.shape:id,name,image',
             'variations.metalColor:dmt_id,dmt_name,dmt_tooltip,color_code',
-            'variations.taxRates:id,name,rate', // ✅ Added tax rates
+            'variations.taxRates:id,name,rate,code', // ✅ Added tax rates
             'productcategory:category_id,category_name,parent_id',
             'productcategory.parent:category_id,category_name',
             'variations.diamondQualityGroup:dqg_id,dqg_name',
@@ -4423,6 +4534,22 @@ class ProductController extends Controller
                         'rate' => $taxRate->rate
                     ];
                 }),
+                
+                // ✅ GST amounts and details
+                'total_tax_rate' => $v->total_tax_rate,
+                'gold_gst_amount' => $v->gold_gst_amount,
+                'diamond_gst_amount' => $v->diamond_gst_amount,
+                'making_gst_amount' => $v->making_gst_amount,
+                'gold_gst_rate' => $v->gold_gst_rate,
+                'diamond_gst_rate' => $v->diamond_gst_rate,
+                'making_gst_rate' => $v->making_gst_rate,
+                'total_gst_amount' => $v->total_gst_amount,
+                'price_without_gst' => $v->price_without_gst,
+                'making_without_gst' => $v->making_without_gst,
+                'tax_amount' => $v->tax_amount,
+                'price_with_tax' => $v->price_with_tax,
+                'gst_breakdown' => $v->gst_breakdown,
+                'formatted_gst_details' => $v->formatted_gst_details,
 
                 'category' => $category ? [
                     'id' => $category->category_id,
