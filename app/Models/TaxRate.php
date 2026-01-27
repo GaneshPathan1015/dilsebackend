@@ -125,20 +125,7 @@ class TaxRate extends Model
             ->pluck('name', 'id')
             ->prepend('Select Tax Rate', '');
     }
-    
-    // // ✅ UPDATED: New relationship with product_variations
-    // public function productVariations()
-    // {
-    //     return $this->hasMany(ProductVariation::class);
-    // }
-     
-    // // ✅ Keep diamonds relationship
-    // public function diamonds()
-    // {
-    //     return $this->hasMany(DiamondMaster::class, 'tax_rate_id');
-    // }
 
-    // ✅ UPDATED: New many-to-many relationship with product_variations
     public function productVariations()
     {
         return $this->belongsToMany(ProductVariation::class, 'product_variation_tax_rate');

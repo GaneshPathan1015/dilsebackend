@@ -76,11 +76,12 @@
 
 .select2-container--default .select2-selection--multiple .select2-selection__rendered {
     padding: 2px 10px;
+    display: table-cell !important;
 }
 
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background-color: #007bff;
-    border: 1px solid #007bff;
+    background-color: #0a0a0a !important;
+    border: 1px solid #0a0a0a !important;
     color: white;
     padding: 2px 8px;
     margin-top: 4px;
@@ -650,6 +651,12 @@
                                                     <input type="number" step="0.01" name="variations[0][regular_price]" class="form-control" placeholder="0.00">
                                                     <div class="error-message" id="error-variations-0-regular_price"></div>
                                                 </div>
+
+                                                 <!-- ✅ Making Charges Field -->
+                                            <div class="col-md-3">
+                                                <label class="form-label">Making Charges</label>
+                                                <input type="number" step="0.01" name="variations[0][making_charges]" class="form-control making-charges" placeholder="0.00" value="0">
+                                            </div>
                                                 
                                                 <div class="col-md-3">
                                                     <label class="form-label">Stock</label>
@@ -683,6 +690,43 @@
                     </select>
                     <div class="error-message" id="error-variations-0-tax_rate_id"></div>
                 </div>
+
+                 <!-- ✅ GST Calculation Display -->
+                                            {{-- <div class="col-12 mt-3 gst-breakdown" style="display: none;">
+                                                <div class="card">
+                                                    <div class="card-header bg-light">
+                                                        <h6 class="mb-0">GST Calculation</h6>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row">
+                                                            <div class="col-md-4">
+                                                                <p><strong>Gold Value:</strong> ₹<span class="gold-value">0.00</span></p>
+                                                                <p><strong>Gold GST (3%):</strong> ₹<span class="gold-gst-amount">0.00</span></p>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <p><strong>Diamond Value:</strong> ₹<span class="diamond-value">0.00</span></p>
+                                                                <p><strong>Diamond GST (0.25%):</strong> ₹<span class="diamond-gst-amount">0.00</span></p>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <p><strong>Making Charges:</strong> ₹<span class="making-value">0.00</span></p>
+                                                                <p><strong>Making GST (3%):</strong> ₹<span class="making-gst-amount">0.00</span></p>
+                                                            </div>
+                                                        </div>
+                                                        <hr>
+                                                        <div class="row mt-2">
+                                                            <div class="col-md-4">
+                                                                <p><strong>Total Without GST:</strong> ₹<span class="total-without-gst">0.00</span></p>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <p><strong>Total GST:</strong> ₹<span class="total-gst-amount">0.00</span></p>
+                                                            </div>
+                                                            <div class="col-md-4">
+                                                                <p><strong>Final Price (with GST):</strong> ₹<span class="final-price">0.00</span></p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div> --}}
                                                 
                                                 <div class="col-md-3">
                                                     <label class="form-label">Best Selling</label>
@@ -957,9 +1001,84 @@
             document.getElementById('products_slug').value = slug;
         });
 
+    //       // Get tax rates from database (passed from controller)
+    // const taxRates = @json($taxRates->keyBy('code')->map(function($rate) {
+    //     return $rate->rate;
+    // }));
+    
+    // // Default tax rates if not found in database
+    // const DEFAULT_TAX_RATES = {
+    //     'GST_GOLD': 3.00,
+    //     'GST_DIAMOND': 0.25,
+    //     'GST_MAKING': 3.00
+    // };
+    
+    // // Diamond price per carat (adjust as per your business logic)
+    // const DIAMOND_PRICE_PER_CARAT = 1000;
+    
+    // // Function to get tax rate
+    // function getTaxRate(code) {
+    //     return taxRates[code] || DEFAULT_TAX_RATES[code] || 0;
+    // }
+    
+    // // Function to calculate GST
+    // function calculateGST(variationRow) {
+    //     // Get values
+    //     const basePrice = parseFloat(variationRow.find('.base-price').val()) || 0;
+    //     const makingCharges = parseFloat(variationRow.find('.making-charges').val()) || 0;
+    //     const diamondWeight = parseFloat(variationRow.find('input[name*="diamond_weight"]').val()) || 0;
+        
+    //     // Get tax rates
+    //     const goldGstRate = getTaxRate('GST_GOLD');
+    //     const diamondGstRate = getTaxRate('GST_DIAMOND');
+    //     const makingGstRate = getTaxRate('GST_MAKING');
+        
+    //     // Calculate diamond value
+    //     const diamondValue = diamondWeight * DIAMOND_PRICE_PER_CARAT;
+        
+    //     // Calculate GST amounts
+    //     const goldGstAmount = (basePrice * goldGstRate) / 100;
+    //     const diamondGstAmount = (diamondValue * diamondGstRate) / 100;
+    //     const makingGstAmount = (makingCharges * makingGstRate) / 100;
+        
+    //     // Calculate totals
+    //     const totalWithoutGst = basePrice + makingCharges;
+    //     const totalGstAmount = goldGstAmount + diamondGstAmount + makingGstAmount;
+    //     const finalPrice = totalWithoutGst + totalGstAmount;
+        
+    //     // Update display
+    //     variationRow.find('.gold-value').text(basePrice.toFixed(2));
+    //     variationRow.find('.diamond-value').text(diamondValue.toFixed(2));
+    //     variationRow.find('.making-value').text(makingCharges.toFixed(2));
+        
+    //     variationRow.find('.gold-gst-amount').text(goldGstAmount.toFixed(2));
+    //     variationRow.find('.diamond-gst-amount').text(diamondGstAmount.toFixed(2));
+    //     variationRow.find('.making-gst-amount').text(makingGstAmount.toFixed(2));
+        
+    //     variationRow.find('.total-without-gst').text(totalWithoutGst.toFixed(2));
+    //     variationRow.find('.total-gst-amount').text(totalGstAmount.toFixed(2));
+    //     variationRow.find('.final-price').text(finalPrice.toFixed(2));
+        
+    //     // Show GST breakdown
+    //     variationRow.find('.gst-breakdown').show();
+    // }
+
         $(document).ready(function () {
             let variationCount = 1;
             let isSubmitting = false;
+
+        //      // Initialize Select2 for tax rates
+        // $('.tax-rate-select').select2({
+        //     placeholder: "Select Tax Rate(s)",
+        //     allowClear: true,
+        //     width: '100%'
+        // });
+        
+        // // Calculate GST when prices change
+        // $(document).on('input', '.base-price, .making-charges, input[name*="diamond_weight"]', function() {
+        //     const variationRow = $(this).closest('.variation-row');
+        //     calculateGST(variationRow);
+        // });
 
             // Add Variation Row
             $('#addVariationRow').click(function (e) {
@@ -1010,7 +1129,11 @@
                             <input type="number" step="0.01" name="variations[${variationCount}][regular_price]" class="form-control" placeholder="0.00">
                             <div class="error-message" id="error-variations-${variationCount}-regular_price"></div>
                         </div>
-                        
+                         <!-- ✅ Making Charges Field -->
+                    <div class="col-md-3">
+                        <label class="form-label">Making Charges</label>
+                        <input type="number" step="0.01" name="variations[${variationCount}][making_charges]" class="form-control making-charges" placeholder="0.00" value="0">
+                    </div>
                         <div class="col-md-3">
                             <label class="form-label">Stock</label>
                             <input type="number" name="variations[${variationCount}][stock]" class="form-control" value="0" placeholder="0">
@@ -1038,8 +1161,9 @@
                                 </option>
                             @endforeach
                         </select>
-                        <div class="error-message" id="error-variations-${variationCount}-tax_rate_id"></div>
                     </div>
+
+                
                         
                         <div class="col-md-3">
                             <label class="form-label">Best Selling</label>
