@@ -4545,7 +4545,7 @@ class ProductController extends Controller
                 'making_gst_rate' => $v->making_gst_rate,
                 'total_gst_amount' => $v->total_gst_amount,
                 'price_without_gst' => $v->price_without_gst,
-                'making_without_gst' => $v->making_without_gst,
+                'making_charges' => $v->making_without_gst,
                 'tax_amount' => $v->tax_amount,
                 'price_with_tax' => $v->price_with_tax,
                 'gst_breakdown' => $v->gst_breakdown,
