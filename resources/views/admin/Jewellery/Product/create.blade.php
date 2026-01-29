@@ -790,12 +790,6 @@
                                         <div class="woocommerce-section-title">Product Information</div>
                                             <div class="row">
                                                 <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Product Model</label>
-                                                    <input type="text" name="products_model" class="form-control" value="{{ old('products_model') }}">
-                                                    <div class="error-message" id="error-products_model"></div>
-                                                </div>
-                                                
-                                                <div class="col-md-6 mb-3">
                                                     <label class="form-label">Build Type</label>
                                                     <select name="build_product_type" id="build_product_type" class="form-select">
                                                         <option value="yes" {{ old('build_product_type') == 'yes' ? 'selected' : '' }}>Yes</option>
@@ -803,41 +797,11 @@
                                                     </select>
                                                     <div class="error-message" id="error-build_product_type"></div>
                                                 </div>
-                                                
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Related Products</label>
-                                                    <input type="text" name="products_related_items" class="form-control" value="{{ old('products_related_items') }}">
-                                                    <div class="error-message" id="error-products_related_items"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Master SKU Reference</label>
-                                                    <input type="text" name="related_master_sku" class="form-control" value="{{ old('related_master_sku') }}">
-                                                    <div class="error-message" id="error-related_master_sku"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Default Size</label>
-                                                    <input type="text" name="default_size" class="form-control" value="{{ old('default_size') }}">
-                                                    <div class="error-message" id="error-default_size"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Certificate Number</label>
-                                                    <input type="text" name="certificate_number" class="form-control" value="{{ old('certificate_number') }}">
-                                                    <div class="error-message" id="error-certificate_number"></div>
-                                                </div>
 
                                                 <div class="col-md-6 mb-3">
                                                     <label class="form-label">Display Order</label>
                                                     <input type="number" name="sort_order" class="form-control" value="{{ old('sort_order', 0) }}">
                                                     <div class="error-message" id="error-sort_order"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Catalog Number</label>
-                                                    <input type="text" name="catelog_no" class="form-control" value="{{ old('catelog_no') }}">
-                                                    <div class="error-message" id="error-catelog_no"></div>
                                                 </div>
 
                                                 <div class="col-12 mb-3">
@@ -857,11 +821,6 @@
                                         <div class="woocommerce-section">
                                             <div class="woocommerce-section-title">Inventory Management</div>
                                             <div class="row">
-                                                <div class="col-md-4 mb-3">
-                                                    <label class="form-label">Stock Quantity</label>
-                                                    <input type="number" name="products_quantity" class="form-control" value="{{ old('products_quantity', 0) }}">
-                                                    <div class="error-message" id="error-products_quantity"></div>
-                                                </div>
                                                 
                                                 <div class="col-md-4 mb-3">
                                                     <label class="form-label">Stock Status</label>
@@ -937,22 +896,11 @@
                                                     <input type="text" name="products_meta_title" class="form-control" value="{{ old('products_meta_title') }}">
                                                     <div class="error-message" id="error-products_meta_title"></div>
                                                 </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">SEO Keywords</label>
-                                                    <input type="text" name="products_meta_keyword" class="form-control" value="{{ old('products_meta_keyword') }}">
-                                                    <div class="error-message" id="error-products_meta_keyword"></div>
-                                                </div>
 
                                                 <div class="col-md-6 mb-3">
                                                     <label class="form-label">Product Keywords</label>
                                                     <input type="text" name="product_keywords" class="form-control" value="{{ old('product_keywords') }}">
                                                     <div class="error-message" id="error-product_keywords"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Product Promotion</label>
-                                                    <input type="text" name="product_promotion" class="form-control" value="{{ old('product_promotion') }}">
-                                                    <div class="error-message" id="error-product_promotion"></div>
                                                 </div>
 
                                                 <div class="col-md-12 mb-3">
@@ -1001,84 +949,9 @@
             document.getElementById('products_slug').value = slug;
         });
 
-    //       // Get tax rates from database (passed from controller)
-    // const taxRates = @json($taxRates->keyBy('code')->map(function($rate) {
-    //     return $rate->rate;
-    // }));
-    
-    // // Default tax rates if not found in database
-    // const DEFAULT_TAX_RATES = {
-    //     'GST_GOLD': 3.00,
-    //     'GST_DIAMOND': 0.25,
-    //     'GST_MAKING': 3.00
-    // };
-    
-    // // Diamond price per carat (adjust as per your business logic)
-    // const DIAMOND_PRICE_PER_CARAT = 1000;
-    
-    // // Function to get tax rate
-    // function getTaxRate(code) {
-    //     return taxRates[code] || DEFAULT_TAX_RATES[code] || 0;
-    // }
-    
-    // // Function to calculate GST
-    // function calculateGST(variationRow) {
-    //     // Get values
-    //     const basePrice = parseFloat(variationRow.find('.base-price').val()) || 0;
-    //     const makingCharges = parseFloat(variationRow.find('.making-charges').val()) || 0;
-    //     const diamondWeight = parseFloat(variationRow.find('input[name*="diamond_weight"]').val()) || 0;
-        
-    //     // Get tax rates
-    //     const goldGstRate = getTaxRate('GST_GOLD');
-    //     const diamondGstRate = getTaxRate('GST_DIAMOND');
-    //     const makingGstRate = getTaxRate('GST_MAKING');
-        
-    //     // Calculate diamond value
-    //     const diamondValue = diamondWeight * DIAMOND_PRICE_PER_CARAT;
-        
-    //     // Calculate GST amounts
-    //     const goldGstAmount = (basePrice * goldGstRate) / 100;
-    //     const diamondGstAmount = (diamondValue * diamondGstRate) / 100;
-    //     const makingGstAmount = (makingCharges * makingGstRate) / 100;
-        
-    //     // Calculate totals
-    //     const totalWithoutGst = basePrice + makingCharges;
-    //     const totalGstAmount = goldGstAmount + diamondGstAmount + makingGstAmount;
-    //     const finalPrice = totalWithoutGst + totalGstAmount;
-        
-    //     // Update display
-    //     variationRow.find('.gold-value').text(basePrice.toFixed(2));
-    //     variationRow.find('.diamond-value').text(diamondValue.toFixed(2));
-    //     variationRow.find('.making-value').text(makingCharges.toFixed(2));
-        
-    //     variationRow.find('.gold-gst-amount').text(goldGstAmount.toFixed(2));
-    //     variationRow.find('.diamond-gst-amount').text(diamondGstAmount.toFixed(2));
-    //     variationRow.find('.making-gst-amount').text(makingGstAmount.toFixed(2));
-        
-    //     variationRow.find('.total-without-gst').text(totalWithoutGst.toFixed(2));
-    //     variationRow.find('.total-gst-amount').text(totalGstAmount.toFixed(2));
-    //     variationRow.find('.final-price').text(finalPrice.toFixed(2));
-        
-    //     // Show GST breakdown
-    //     variationRow.find('.gst-breakdown').show();
-    // }
-
         $(document).ready(function () {
             let variationCount = 1;
             let isSubmitting = false;
-
-        //      // Initialize Select2 for tax rates
-        // $('.tax-rate-select').select2({
-        //     placeholder: "Select Tax Rate(s)",
-        //     allowClear: true,
-        //     width: '100%'
-        // });
-        
-        // // Calculate GST when prices change
-        // $(document).on('input', '.base-price, .making-charges, input[name*="diamond_weight"]', function() {
-        //     const variationRow = $(this).closest('.variation-row');
-        //     calculateGST(variationRow);
-        // });
 
             // Add Variation Row
             $('#addVariationRow').click(function (e) {

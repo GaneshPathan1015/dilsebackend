@@ -443,60 +443,65 @@ use Carbon\Carbon;
 class CombinedProductsExport implements WithMultipleSheets
 {
     use Exportable;
-    
+
     protected $products;
     protected $variations;
-    
+
     public function __construct()
     {
         // Load data with chunking for memory efficiency
         $this->products = Product::with(['productcategory', 'vendor'])
             ->orderBy('products_id', 'desc')
             ->get();
-            
-        $this->variations = ProductVariation::with(['product', 'shape', 'metalColor', 'diamondQualityGroup', 'taxRates']) // ✅ Add taxRates
-            ->orderBy('id', 'desc')
+
+        $this->variations = ProductVariation::with([
+            'product',
+            'shape',
+            'metalColor',
+            'diamondQualityGroup',
+            'taxRates' // ✅ Add tax rates
+        ])->orderBy('id', 'desc')
             ->get();
     }
-    
+
     public function sheets(): array
     {
         $sheets = [];
-        
+
         // Products Sheet
         $sheets[] = new ProductsSheet($this->products);
-        
+
         // Variations Sheet
         $sheets[] = new VariationsSheet($this->variations);
-        
+
         return $sheets;
     }
 }
 
-class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection, 
-                              \Maatwebsite\Excel\Concerns\WithTitle,
-                              \Maatwebsite\Excel\Concerns\WithHeadings,
-                              \Maatwebsite\Excel\Concerns\WithMapping,
-                              \Maatwebsite\Excel\Concerns\WithStyles,
-                              \Maatwebsite\Excel\Concerns\WithEvents
+class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
+    \Maatwebsite\Excel\Concerns\WithTitle,
+    \Maatwebsite\Excel\Concerns\WithHeadings,
+    \Maatwebsite\Excel\Concerns\WithMapping,
+    \Maatwebsite\Excel\Concerns\WithStyles,
+    \Maatwebsite\Excel\Concerns\WithEvents
 {
     protected $products;
-    
+
     public function __construct($products)
     {
         $this->products = $products;
     }
-    
+
     public function collection()
     {
         return $this->products;
     }
-    
+
     public function title(): string
     {
         return 'Products';
     }
-    
+
     public function headings(): array
     {
         return [
@@ -507,9 +512,6 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             'Gender',
             'Bond',
             'Available',
-            'Quantity',
-            'Model',
-            'Weight',
             'Status',
             'Slug',
             'Category Name',
@@ -520,10 +522,12 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             'Country of Origin',
             'Tax Class ID',
             'Tax',
-            'Is Bestseller',
             'Is Featured',
             'Ready to Ship',
             'Is Collection',
+            'Is Build Product',
+            'Is Sale',
+            'Is Gift',
             'Diamond Weight Group ID',
             'Diamond Quality ID',
             'Diamond Clarity ID',
@@ -533,12 +537,7 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             'Stone Type ID',
             'Metal Type ID',
             'Metal Color ID',
-            'Metal Weight',
-            'Is Build Product',
-            'Shape IDs',
             'Build Product Type',
-            'Certified Lab',
-            'Certificate Number',
             'Meta Title',
             'Meta Description',
             'Meta Keyword',
@@ -546,24 +545,22 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             'Deleted',
             'Sort Order',
             'Shop Zone ID',
-            'Is Sale',
-            'Is Gift',
             'Date Added',
             'Date Updated',
         ];
     }
-    
+
     public function map($product): array
     {
         $dateAdded = $this->formatDate($product->date_added);
         $dateUpdated = $this->formatDate($product->date_updated);
-        
+
         // Truncate description to avoid excel cell limits
         $description = $product->products_description ?? '';
         if (strlen($description) > 30000) {
             $description = substr($description, 0, 30000) . '...';
         }
-        
+
         return [
             $product->products_id,
             $product->products_name,
@@ -572,9 +569,6 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             $product->gender == '0' ? 'Man' : 'Woman',
             $product->bond == '0' ? 'Metal' : 'Diamond',
             $product->available,
-            $product->products_quantity,
-            $product->products_model,
-            $product->products_weight,
             $product->products_status ? 'Active' : 'Inactive',
             $product->products_slug,
             $product->productcategory->category_name ?? 'N/A',
@@ -585,10 +579,12 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             $product->country_of_origin,
             $product->products_tax_class_id,
             $product->products_tax,
-            $product->is_bestseller ? 'Yes' : 'No',
             $product->is_featured ? 'Yes' : 'No',
             $product->ready_to_ship ? 'Yes' : 'No',
             $product->is_collection ? 'Yes' : 'No',
+            $product->is_build_product,
+            $product->is_sale ? 'Yes' : 'No',
+            $product->is_gift ? 'Yes' : 'No',
             $product->diamond_weight_group_id,
             $product->diamond_quality_id,
             $product->diamond_clarity_id,
@@ -598,12 +594,7 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             $product->stone_type_id,
             $product->metal_type_id,
             $product->metal_color_id,
-            $product->metal_weight,
-            $product->is_build_product ? 'Yes' : 'No',
-            $product->shape_ids,
             $product->build_product_type,
-            $product->certified_lab,
-            $product->certificate_number,
             $product->products_meta_title,
             $product->products_meta_description,
             $product->products_meta_keyword,
@@ -611,24 +602,22 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             $product->deleted ? 'Yes' : 'No',
             $product->sort_order,
             $product->shop_zone_id,
-            $product->is_sale ? 'Yes' : 'No',
-            $product->is_gift ? 'Yes' : 'No',
             $dateAdded,
             $dateUpdated,
         ];
     }
-    
+
     private function formatDate($date)
     {
         if (empty($date)) {
             return '';
         }
-        
+
         // If it's already a Carbon instance
         if ($date instanceof \Carbon\Carbon) {
             return $date->format('Y-m-d H:i:s');
         }
-        
+
         // If it's a string, try to parse it
         try {
             return Carbon::parse($date)->format('Y-m-d H:i:s');
@@ -636,7 +625,7 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             return (string) $date;
         }
     }
-    
+
     public function styles($sheet)
     {
         return [
@@ -649,29 +638,29 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             ],
         ];
     }
-    
+
     public function registerEvents(): array
     {
         return [
-            \Maatwebsite\Excel\Events\AfterSheet::class => function(\Maatwebsite\Excel\Events\AfterSheet $event) {
+            \Maatwebsite\Excel\Events\AfterSheet::class => function (\Maatwebsite\Excel\Events\AfterSheet $event) {
                 // Get the highest column
                 $highestColumn = $event->sheet->getHighestColumn();
-                
+
                 // Calculate the number of columns
                 $columnCount = $this->columnLetterToNumber($highestColumn);
-                
+
                 // Auto-size all columns
                 for ($i = 1; $i <= $columnCount; $i++) {
                     $columnLetter = $this->numberToColumnLetter($i);
                     $event->sheet->getColumnDimension($columnLetter)->setAutoSize(true);
                 }
-                
+
                 // Add borders to all cells
                 $event->sheet->getStyle('A1:' . $highestColumn . $event->sheet->getHighestRow())
                     ->getBorders()
                     ->getAllBorders()
                     ->setBorderStyle(Border::BORDER_THIN);
-                    
+
                 // Set text wrap for description column (C column)
                 $event->sheet->getStyle('C2:C' . $event->sheet->getHighestRow())
                     ->getAlignment()
@@ -679,20 +668,20 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             },
         ];
     }
-    
+
     private function columnLetterToNumber($columnLetter)
     {
         $columnLetter = strtoupper($columnLetter);
         $length = strlen($columnLetter);
         $number = 0;
-        
+
         for ($i = 0; $i < $length; $i++) {
             $number = $number * 26 + (ord($columnLetter[$i]) - ord('A') + 1);
         }
-        
+
         return $number;
     }
-    
+
     private function numberToColumnLetter($number)
     {
         $columnLetter = '';
@@ -701,35 +690,35 @@ class ProductsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             $columnLetter = chr(ord('A') + $remainder) . $columnLetter;
             $number = intval(($number - $remainder) / 26);
         }
-        
+
         return $columnLetter;
     }
 }
 
-class VariationsSheet implements \Maatwebsite\Excel\Concerns\FromCollection, 
-                               \Maatwebsite\Excel\Concerns\WithTitle,
-                               \Maatwebsite\Excel\Concerns\WithHeadings,
-                               \Maatwebsite\Excel\Concerns\WithMapping,
-                               \Maatwebsite\Excel\Concerns\WithStyles,
-                               \Maatwebsite\Excel\Concerns\WithEvents
+class VariationsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
+    \Maatwebsite\Excel\Concerns\WithTitle,
+    \Maatwebsite\Excel\Concerns\WithHeadings,
+    \Maatwebsite\Excel\Concerns\WithMapping,
+    \Maatwebsite\Excel\Concerns\WithStyles,
+    \Maatwebsite\Excel\Concerns\WithEvents
 {
     protected $variations;
-    
+
     public function __construct($variations)
     {
         $this->variations = $variations;
     }
-    
+
     public function collection()
     {
         return $this->variations;
     }
-    
+
     public function title(): string
     {
         return 'Variations';
     }
-    
+
     public function headings(): array
     {
         return [
@@ -740,71 +729,64 @@ class VariationsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             'Carat',
             'Price',
             'Regular Price',
+            'Making Charges', // ✅ नया column
             'Stock',
             'Weight',
             'Shape ID',
             'Diamond Weight',
             'Diamond Quality ID',
             'Metal Color ID',
+            'Tax Rate Codes', // ✅ new column (comma separated)
             'Is Best Selling',
-            'Tax Rate Codes', // ✅ New column for tax rates
-            'Tax Rate Names', // ✅ New column for tax rate names
-            'Total Tax Rate (%)', // ✅ New column for total tax rate
-            'Tax Amount', // ✅ New column for tax amount
-            'Price With Tax', // ✅ New column for price with tax
             'Created At',
             'Updated At',
         ];
     }
-    
+
     public function map($variation): array
     {
         $createdAt = $this->formatDate($variation->created_at);
         $updatedAt = $this->formatDate($variation->updated_at);
-        
-        // ✅ Get tax information
-        $taxRateCodes = $variation->taxRates->pluck('code')->implode(', ');
-        $taxRateNames = $variation->taxRates->pluck('name')->implode(', ');
-        $totalTaxRate = $variation->total_tax_rate;
-        $taxAmount = $variation->tax_amount;
-        $priceWithTax = $variation->price_with_tax;
-        
+
+        // Get tax rate codes as comma separated string
+        $taxRateCodes = '';
+        if ($variation->taxRates && $variation->taxRates->count() > 0) {
+            $taxRateCodes = $variation->taxRates->pluck('code')->implode(',');
+        }
+
         return [
-            $variation->product_id, 
+            $variation->product_id,
             $variation->product->products_name ?? 'N/A',
             $variation->id,
             $variation->sku,
             $variation->carat,
             $variation->price,
             $variation->regular_price,
+            $variation->making_charges ?? 0,
             $variation->stock,
             $variation->weight,
             $variation->shape_id,
             $variation->diamond_weight,
             $variation->diamond_quality_id,
             $variation->metal_color_id,
+            $taxRateCodes,
             $variation->is_best_selling ? 'Yes' : 'No',
-            $taxRateCodes, // ✅ Tax rate codes
-            $taxRateNames, // ✅ Tax rate names
-            $totalTaxRate, // ✅ Total tax rate percentage
-            $taxAmount, // ✅ Calculated tax amount
-            $priceWithTax, // ✅ Price including tax
             $createdAt,
             $updatedAt,
         ];
     }
-    
+
     private function formatDate($date)
     {
         if (empty($date)) {
             return '';
         }
-        
+
         // If it's already a Carbon instance
         if ($date instanceof \Carbon\Carbon) {
             return $date->format('Y-m-d H:i:s');
         }
-        
+
         // If it's a string, try to parse it
         try {
             return Carbon::parse($date)->format('Y-m-d H:i:s');
@@ -812,7 +794,7 @@ class VariationsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             return (string) $date;
         }
     }
-    
+
     public function styles($sheet)
     {
         return [
@@ -825,58 +807,45 @@ class VariationsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             ],
         ];
     }
-    
+
     public function registerEvents(): array
     {
         return [
-            \Maatwebsite\Excel\Events\AfterSheet::class => function(\Maatwebsite\Excel\Events\AfterSheet $event) {
+            \Maatwebsite\Excel\Events\AfterSheet::class => function (\Maatwebsite\Excel\Events\AfterSheet $event) {
                 // Get the highest column
                 $highestColumn = $event->sheet->getHighestColumn();
-                
+
                 // Calculate the number of columns
                 $columnCount = $this->columnLetterToNumber($highestColumn);
-                
+
                 // Auto-size all columns
                 for ($i = 1; $i <= $columnCount; $i++) {
                     $columnLetter = $this->numberToColumnLetter($i);
                     $event->sheet->getColumnDimension($columnLetter)->setAutoSize(true);
                 }
-                
+
                 // Add borders to all cells
                 $event->sheet->getStyle('A1:' . $highestColumn . $event->sheet->getHighestRow())
                     ->getBorders()
                     ->getAllBorders()
                     ->setBorderStyle(Border::BORDER_THIN);
-                    
-                // Set number format for price and tax columns
-                $priceColumns = ['F', 'G', 'R', 'S']; // Price, Regular Price, Tax Amount, Price With Tax
-                foreach ($priceColumns as $col) {
-                    $event->sheet->getStyle($col . '2:' . $col . $event->sheet->getHighestRow())
-                        ->getNumberFormat()
-                        ->setFormatCode('#,##0.00');
-                }
-                
-                // Set percentage format for tax rate column
-                $event->sheet->getStyle('Q2:Q' . $event->sheet->getHighestRow())
-                    ->getNumberFormat()
-                    ->setFormatCode('0.00%');
             },
         ];
     }
-    
+
     private function columnLetterToNumber($columnLetter)
     {
         $columnLetter = strtoupper($columnLetter);
         $length = strlen($columnLetter);
         $number = 0;
-        
+
         for ($i = 0; $i < $length; $i++) {
             $number = $number * 26 + (ord($columnLetter[$i]) - ord('A') + 1);
         }
-        
+
         return $number;
     }
-    
+
     private function numberToColumnLetter($number)
     {
         $columnLetter = '';
@@ -885,7 +854,7 @@ class VariationsSheet implements \Maatwebsite\Excel\Concerns\FromCollection,
             $columnLetter = chr(ord('A') + $remainder) . $columnLetter;
             $number = intval(($number - $remainder) / 26);
         }
-        
+
         return $columnLetter;
     }
 }

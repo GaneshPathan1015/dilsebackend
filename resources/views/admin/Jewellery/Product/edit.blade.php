@@ -844,12 +844,6 @@
                                         <div class="woocommerce-section-title">Product Information</div>
                                             <div class="row">
                                                 <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Product Model</label>
-                                                    <input type="text" name="products_model" class="form-control" value="{{ old('products_model', $product->products_model) }}">
-                                                    <div class="error-message" id="error-products_model"></div>
-                                                </div>
-                                                
-                                                <div class="col-md-6 mb-3">
                                                     <label class="form-label">Build Type</label>
                                                     <select name="build_product_type" id="build_product_type" class="form-select">
                                                         <option value="yes" {{ old('build_product_type', $product->build_product_type) == 'yes' ? 'selected' : '' }}>Yes</option>
@@ -857,54 +851,11 @@
                                                     </select>
                                                     <div class="error-message" id="error-build_product_type"></div>
                                                 </div>
-                                                
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Related Products</label>
-                                                    <input type="text" name="products_related_items" class="form-control" value="{{ old('products_related_items', $product->products_related_items) }}">
-                                                    <div class="error-message" id="error-products_related_items"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Master SKU Reference</label>
-                                                    <input type="text" name="related_master_sku" class="form-control" value="{{ old('related_master_sku', $product->related_master_sku) }}">
-                                                    <div class="error-message" id="error-related_master_sku"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Certified Lab</label>
-                                                    <select name="certified_lab" class="form-select">
-                                                        <option value="">Select Certified Lab</option>
-                                                        @foreach($diamondLabs as $diamondLab)
-                                                            <option value="{{ $diamondLab->dl_id }}" {{ old('certified_lab', $product->certified_lab) == $diamondLab->dl_id ? 'selected' : '' }}>
-                                                                {{ $diamondLab->dl_name }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                    <div class="error-message" id="error-certified_lab"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Certificate Number</label>
-                                                    <input type="text" name="certificate_number" class="form-control" value="{{ old('certificate_number', $product->certificate_number) }}">
-                                                    <div class="error-message" id="error-certificate_number"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Default Size</label>
-                                                    <input type="text" name="default_size" class="form-control" value="{{ old('default_size', $product->default_size) }}">
-                                                    <div class="error-message" id="error-default_size"></div>
-                                                </div>
 
                                                 <div class="col-md-6 mb-3">
                                                     <label class="form-label">Display Order</label>
                                                     <input type="number" name="sort_order" class="form-control" value="{{ old('sort_order', $product->sort_order) }}">
                                                     <div class="error-message" id="error-sort_order"></div>
-                                                </div>
-
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">Catalog Number</label>
-                                                    <input type="text" name="catelog_no" class="form-control" value="{{ old('catelog_no', $product->catelog_no) }}" required>
-                                                    <div class="error-message" id="error-catelog_no"></div>
                                                 </div>
 
                                                 <div class="col-12 mb-3">
@@ -925,11 +876,6 @@
                                         <div class="woocommerce-section-title">Inventory Management</div>
                                         <div class="row">
                                             <div class="col-md-4 mb-3">
-                                                <label class="form-label">Stock Quantity</label>
-                                                <input type="number" name="products_quantity" class="form-control" value="{{ old('products_quantity', $product->products_quantity) }}">
-                                                <div class="error-message" id="error-products_quantity"></div>
-                                            </div>
-                                            <div class="col-md-4 mb-3">
                                                 <label class="form-label">Stock Status</label>
                                                 <select name="available" class="form-select">
                                                     <option value="yes" {{ old('available', $product->available) == 'yes' ? 'selected' : '' }}>In Stock</option>
@@ -937,11 +883,6 @@
                                                 </select>
                                                 <div class="error-message" id="error-available"></div>
                                             </div>
-                                            {{-- <div class="col-md-4 mb-3">
-                                                <label class="form-label">Product Weight (g) *</label>
-                                                <input type="number" step="0.01" name="products_weight" class="form-control" value="{{ old('products_weight', $product->products_weight) }}" required>
-                                                <div class="error-message" id="error-products_weight"></div>
-                                            </div> --}}
                                         </div>
                                     </div>
                                 </div>
@@ -1004,20 +945,9 @@
                                                 <div class="error-message" id="error-products_meta_title"></div>
                                             </div>
                                             <div class="col-md-6 mb-3">
-                                                <label class="form-label">SEO Keywords</label>
-                                                <input type="text" name="products_meta_keyword" class="form-control" value="{{ old('products_meta_keyword', $product->products_meta_keyword) }}">
-                                                <div class="error-message" id="error-products_meta_keyword"></div>
-                                            </div>
-                                            <div class="col-md-6 mb-3">
                                                 <label class="form-label">Product Keywords</label>
                                                 <input type="text" name="product_keywords" class="form-control" value="{{ old('product_keywords', $product->product_keywords) }}">
                                                 <div class="error-message" id="error-product_keywords"></div>
-                                            </div>
-
-                                            <div class="col-md-6 mb-3">
-                                                <label class="form-label">Product Promotion</label>
-                                                <input type="text" name="product_promotion" class="form-control" value="{{ old('product_promotion', $product->product_promotion) }}">
-                                                <div class="error-message" id="error-product_promotion"></div>
                                             </div>
 
                                             <div class="col-md-12 mb-3">

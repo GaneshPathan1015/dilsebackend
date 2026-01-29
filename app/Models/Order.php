@@ -42,12 +42,6 @@ class Order extends Model
         'cancelled_at',
         'cancellation_reason',
         'product_type',
-        'certificate_number',
-        'metal_type',
-        'metal_color',
-        'metal_purity',
-        'stone_details',
-        'size',
     ];
 
     protected $casts = [
@@ -87,7 +81,7 @@ class Order extends Model
                         $coupon->refresh();
                         if ($coupon->used_count < $coupon->usage_limit) {
                             $coupon->increment('used_count');
-                            \Log::info("Coupon count incremented: {$coupon->code}, New count: {$coupon->used_count}");
+                            Log::info("Coupon count incremented: {$coupon->code}, New count: {$coupon->used_count}");
                         }
                     });
                 }
@@ -102,7 +96,7 @@ class Order extends Model
                     if ($coupon && $coupon->used_count > 0) {
                         DB::transaction(function () use ($coupon) {
                             $coupon->decrement('used_count');
-                            \Log::info("Coupon count decremented (order cancelled): {$coupon->code}, New count: {$coupon->used_count}");
+                            Log::info("Coupon count decremented (order cancelled): {$coupon->code}, New count: {$coupon->used_count}");
                         });
                     }
                 }
@@ -150,7 +144,7 @@ class Order extends Model
     {
         try {
             // Log refund initiation
-            \Log::info("Refund initiated for order: {$this->order_id}, Amount: {$this->total_price}, Payment Mode: {$this->payment_mode}");
+            Log::info("Refund initiated for order: {$this->order_id}, Amount: {$this->total_price}, Payment Mode: {$this->payment_mode}");
 
             // In production, integrate with actual payment gateways
             switch ($this->payment_mode) {
@@ -163,11 +157,11 @@ class Order extends Model
                     $this->processRazorpayRefund();
                     break;
                 default:
-                    \Log::info("Refund processed for order: {$this->order_id}");
+                    Log::info("Refund processed for order: {$this->order_id}");
                     break;
             }
         } catch (\Exception $e) {
-            \Log::error("Refund processing failed for order {$this->order_id}: " . $e->getMessage());
+            Log::error("Refund processing failed for order {$this->order_id}: " . $e->getMessage());
         }
     }
 
@@ -217,13 +211,13 @@ class Order extends Model
     // PayPal refund
     protected function processPaypalRefund()
     {
-        \Log::info("PayPal refund processed for order: {$this->order_id}");
+        Log::info("PayPal refund processed for order: {$this->order_id}");
     }
 
     // Razorpay refund
     protected function processRazorpayRefund()
     {
-        \Log::info("Razorpay refund processed for order: {$this->order_id}");
+        Log::info("Razorpay refund processed for order: {$this->order_id}");
     }
 
     // Automatically complete payment when delivered

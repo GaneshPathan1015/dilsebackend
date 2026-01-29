@@ -12,7 +12,6 @@ class ProductVariation extends Model
     
     protected $fillable = [
         'product_id', 
-        'carat',  
         'price', 
         'regular_price',
         'making_charges',
@@ -28,7 +27,6 @@ class ProductVariation extends Model
         'category_id', 
         'metal_color_id', 
         'vendor_id',
-        'parent_category_id',
         'is_best_selling',
     ];
     
