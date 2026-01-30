@@ -469,193 +469,210 @@ $(function() {
         }
     });
 
-    function searchProducts() {
-        const searchTerm = $('#productSearch').val();
-        if (searchTerm.length < 2) {
-            alert('Please enter at least 2 characters to search');
-            return;
-        }
+    // Product Search Results में
+function searchProducts() {
+    const searchTerm = $('#productSearch').val();
+    if (searchTerm.length < 2) {
+        alert('Please enter at least 2 characters to search');
+        return;
+    }
 
-        $.get('{{ route("orders.search.products") }}', { search: searchTerm }, function(response) {
-            let html = '';
-            if (response.length > 0) {
-                response.forEach(product => {
-                    html += `
-                        <div class="col-md-6 mb-3">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <div class="form-check">
-                                        <input class="form-check-input product-checkbox" type="checkbox" 
-                                               data-product-id="${product.id}"
-                                               data-product-name="${product.name}"
-                                               data-product-price="${product.price}"
-                                               data-product-metal="${product.metal_color || ''}"
-                                               data-product-shape="${product.shape || ''}"
-                                               data-product-carat="${product.carat || ''}">
-                                        <label class="form-check-label w-100">
-                                            <strong>${product.name}</strong><br>
-                                            <small class="text-muted">SKU: ${product.sku}</small><br>
-                                            ${product.carat ? `<small>Carat: ${product.carat}</small><br>` : ''}
-                                            ${product.metal_color ? `<small>Metal: ${product.metal_color}</small><br>` : ''}
-                                            ${product.shape ? `<small>Shape: ${product.shape}</small><br>` : ''}
-                                            <small>Stock: ${product.stock}</small><br>
-                                            <strong class="text-primary">$${parseFloat(product.price).toFixed(2)}</strong>
-                                        </label>
-                                    </div>
+    $.get('{{ route("orders.search.products") }}', { search: searchTerm }, function(response) {
+        let html = '';
+        if (response.length > 0) {
+            response.forEach(product => {
+                // ✅ सभी properties check करें
+                const metalColor = product.metal_color || '';
+                const shape = product.shape || '';
+                const carat = product.carat || '';
+                const sku = product.sku || '';
+                const stock = product.stock || 0;
+                const price = parseFloat(product.price) || 0;
+                
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input product-checkbox" type="checkbox" 
+                                           data-product-id="${product.id}"
+                                           data-variation-id="${product.variation_id || ''}"
+                                           data-product-name="${product.name}"
+                                           data-product-price="${price}"
+                                           data-product-metal="${metalColor}"
+                                           data-product-shape="${shape}"
+                                           data-product-carat="${carat}"
+                                           data-product-sku="${sku}">
+                                    <label class="form-check-label w-100">
+                                        <strong>${product.name}</strong><br>
+                                        <small class="text-muted">SKU: ${sku}</small><br>
+                                        ${carat ? `<small>Carat: ${carat}</small><br>` : ''}
+                                        ${metalColor ? `<small>Metal: ${metalColor}</small><br>` : ''}
+                                        ${shape ? `<small>Shape: ${shape}</small><br>` : ''}
+                                        <small>Stock: ${stock}</small><br>
+                                        <strong class="text-primary">$${price.toFixed(2)}</strong>
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                    `;
-                });
-            } else {
-                html = '<div class="col-12"><p class="text-muted">No products found</p></div>';
-            }
-            $('#productResults').html(html);
-        });
+                    </div>
+                `;
+            });
+        } else {
+            html = '<div class="col-12"><p class="text-muted">No products found</p></div>';
+        }
+        $('#productResults').html(html);
+    });
+}
+
+   // Diamond Search Results में
+function searchDiamonds() {
+    const searchTerm = $('#diamondSearch').val();
+    if (searchTerm.length < 2) {
+        alert('Please enter at least 2 characters to search');
+        return;
     }
 
-    // Search Diamonds
-    $('#searchDiamondBtn').click(function() {
-        searchDiamonds();
-    });
-
-    $('#diamondSearch').on('keypress', function(e) {
-        if (e.which === 13) {
-            searchDiamonds();
-        }
-    });
-
-    function searchDiamonds() {
-        const searchTerm = $('#diamondSearch').val();
-        if (searchTerm.length < 2) {
-            alert('Please enter at least 2 characters to search');
-            return;
-        }
-
-        $.get('{{ route("orders.search.diamonds") }}', { search: searchTerm }, function(response) {
-            let html = '';
-            
-            // Check if response is an array and has items
-            if (Array.isArray(response) && response.length > 0) {
-                response.forEach(diamond => {
-                    html += `
-                        <div class="col-md-6 mb-3">
-                            <div class="card h-100">
-                                <div class="card-body">
-                                    <div class="form-check">
-                                        <input class="form-check-input diamond-checkbox" type="checkbox" 
-                                               data-diamond-id="${diamond.id}"
-                                               data-diamond-name="${diamond.name}"
-                                               data-diamond-price="${diamond.price}"
-                                               data-diamond-cert="${diamond.certificate_number || ''}"
-                                               data-diamond-carat="${diamond.carat_weight || ''}"
-                                               data-diamond-shape="${diamond.shape || ''}"
-                                               data-diamond-color="${diamond.color || ''}"
-                                               data-diamond-clarity="${diamond.clarity || ''}">
-                                        <label class="form-check-label w-100">
-                                            <strong>${diamond.name}</strong><br>
-                                            <small class="text-muted">Cert: ${diamond.certificate_number || 'N/A'}</small><br>
-                                            <small>Shape: ${diamond.shape || 'N/A'}</small><br>
-                                            <small>Carat: ${diamond.carat_weight || 'N/A'}</small><br>
-                                            <small>Color: ${diamond.color || 'N/A'} | Clarity: ${diamond.clarity || 'N/A'}</small><br>
-                                            <small>Stock: ${diamond.stock}</small><br>
-                                            <strong class="text-primary">$${parseFloat(diamond.price).toFixed(2)}</strong>
-                                        </label>
-                                    </div>
+    $.get('{{ route("orders.search.diamonds") }}', { search: searchTerm }, function(response) {
+        let html = '';
+        
+        if (Array.isArray(response) && response.length > 0) {
+            response.forEach(diamond => {
+                // ✅ सभी diamond properties check करें
+                const cert = diamond.certificate_number || 'N/A';
+                const caratWeight = diamond.carat_weight || 'N/A';
+                const shape = diamond.shape || 'N/A';
+                const color = diamond.color || 'N/A';
+                const clarity = diamond.clarity || 'N/A';
+                const stock = diamond.stock || 0;
+                const price = parseFloat(diamond.price) || 0;
+                
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="form-check">
+                                    <input class="form-check-input diamond-checkbox" type="checkbox" 
+                                           data-diamond-id="${diamond.id}"
+                                           data-diamond-name="${diamond.name}"
+                                           data-diamond-price="${price}"
+                                           data-diamond-cert="${cert}"
+                                           data-diamond-carat="${caratWeight}"
+                                           data-diamond-shape="${shape}"
+                                           data-diamond-color="${color}"
+                                           data-diamond-clarity="${clarity}">
+                                    <label class="form-check-label w-100">
+                                        <strong>${diamond.name}</strong><br>
+                                        <small class="text-muted">Cert: ${cert}</small><br>
+                                        <small>Shape: ${shape}</small><br>
+                                        <small>Carat: ${caratWeight}</small><br>
+                                        <small>Color: ${color} | Clarity: ${clarity}</small><br>
+                                        <small>Stock: ${stock}</small><br>
+                                        <strong class="text-primary">$${price.toFixed(2)}</strong>
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                    `;
-                });
-            } else {
-                html = '<div class="col-12"><p class="text-muted">No diamonds found</p></div>';
-            }
-            $('#diamondResults').html(html);
-        }).fail(function(xhr, status, error) {
-            console.error('Diamond search failed:', error);
-            $('#diamondResults').html('<div class="col-12"><p class="text-danger">Error searching diamonds. Please try again.</p></div>');
-        });
+                    </div>
+                `;
+            });
+        } else {
+            html = '<div class="col-12"><p class="text-muted">No diamonds found</p></div>';
+        }
+        $('#diamondResults').html(html);
+    }).fail(function(xhr, status, error) {
+        console.error('Diamond search failed:', error);
+        $('#diamondResults').html('<div class="col-12"><p class="text-danger">Error searching diamonds. Please try again.</p></div>');
+    });
+}
+
+// Product checkbox change event
+$(document).on('change', '.product-checkbox', function() {
+    // ✅ सभी data attributes check करें
+    const productId = $(this).data('product-id') || '';
+    const variationId = $(this).data('variation-id') || '';
+    const productName = $(this).data('product-name') || 'Product';
+    const productPrice = parseFloat($(this).data('product-price')) || 0;
+    const metalColor = $(this).data('product-metal') || '';
+    const shape = $(this).data('product-shape') || '';
+    const carat = $(this).data('product-carat') || '';
+    const sku = $(this).data('product-sku') || '';
+    
+    if ($(this).is(':checked')) {
+        // Check if already added
+        const existingIndex = selectedItems.findIndex(item => 
+            item.type === 'jewelry' && 
+            (item.id === productId || (item.variation_id && item.variation_id === variationId))
+        );
+        
+        if (existingIndex === -1) {
+            selectedItems.push({
+                type: 'jewelry',
+                id: productId,
+                variation_id: variationId,
+                name: productName,
+                price: productPrice,
+                quantity: 1,
+                metal_color: metalColor,
+                shape: shape,
+                carat: carat,
+                sku: sku
+            });
+        }
+    } else {
+        // Remove if unchecked
+        selectedItems = selectedItems.filter(item => 
+            !(item.type === 'jewelry' && 
+              (item.id === productId || (item.variation_id && item.variation_id === variationId)))
+        );
     }
+    
+    updateSelectedItems();
+    updateOrderSummary();
+});
 
-    // Add Product to Selected Items
-    $(document).on('change', '.product-checkbox', function() {
-        const productId = $(this).data('product-id');
-        const productName = $(this).data('product-name');
-        const productPrice = parseFloat($(this).data('product-price'));
-        const metalColor = $(this).data('product-metal');
-        const shape = $(this).data('product-shape');
-        const carat = $(this).data('product-carat');
+// Diamond checkbox change event
+$(document).on('change', '.diamond-checkbox', function() {
+    // ✅ सभी data attributes check करें
+    const diamondId = $(this).data('diamond-id') || '';
+    const diamondName = $(this).data('diamond-name') || 'Diamond';
+    const diamondPrice = parseFloat($(this).data('diamond-price')) || 0;
+    const certificate = $(this).data('diamond-cert') || '';
+    const caratWeight = $(this).data('diamond-carat') || '';
+    const shape = $(this).data('diamond-shape') || '';
+    const color = $(this).data('diamond-color') || '';
+    const clarity = $(this).data('diamond-clarity') || '';
+    
+    if ($(this).is(':checked')) {
+        // Check if already added
+        const existingIndex = selectedItems.findIndex(item => 
+            item.type === 'diamond' && item.id === diamondId
+        );
         
-        if ($(this).is(':checked')) {
-            // Check if already added
-            const existingIndex = selectedItems.findIndex(item => 
-                item.type === 'jewelry' && item.id === productId
-            );
-            
-            if (existingIndex === -1) {
-                selectedItems.push({
-                    type: 'jewelry',
-                    id: productId,
-                    name: productName,
-                    price: productPrice,
-                    quantity: 1,
-                    metal_color: metalColor,
-                    shape: shape,
-                    carat: carat
-                });
-            }
-        } else {
-            // Remove if unchecked
-            selectedItems = selectedItems.filter(item => 
-                !(item.type === 'jewelry' && item.id === productId)
-            );
+        if (existingIndex === -1) {
+            selectedItems.push({
+                type: 'diamond',
+                id: diamondId,
+                name: diamondName,
+                price: diamondPrice,
+                quantity: 1,
+                certificate_number: certificate,
+                carat_weight: caratWeight,
+                shape: shape,
+                color: color,
+                clarity: clarity
+            });
         }
-        
-        updateSelectedItems();
-        updateOrderSummary();
-    });
-
-    // Add Diamond to Selected Items
-    $(document).on('change', '.diamond-checkbox', function() {
-        const diamondId = $(this).data('diamond-id');
-        const diamondName = $(this).data('diamond-name');
-        const diamondPrice = parseFloat($(this).data('diamond-price'));
-        const certificate = $(this).data('diamond-cert');
-        const caratWeight = $(this).data('diamond-carat');
-        const shape = $(this).data('diamond-shape');
-        const color = $(this).data('diamond-color');
-        const clarity = $(this).data('diamond-clarity');
-        
-        if ($(this).is(':checked')) {
-            // Check if already added
-            const existingIndex = selectedItems.findIndex(item => 
-                item.type === 'diamond' && item.id === diamondId
-            );
-            
-            if (existingIndex === -1) {
-                selectedItems.push({
-                    type: 'diamond',
-                    id: diamondId,
-                    name: diamondName,
-                    price: diamondPrice,
-                    quantity: 1,
-                    certificate_number: certificate,
-                    carat_weight: caratWeight,
-                    shape: shape,
-                    color: color,
-                    clarity: clarity
-                });
-            }
-        } else {
-            // Remove if unchecked
-            selectedItems = selectedItems.filter(item => 
-                !(item.type === 'diamond' && item.id === diamondId)
-            );
-        }
-        
-        updateSelectedItems();
-        updateOrderSummary();
-    });
+    } else {
+        // Remove if unchecked
+        selectedItems = selectedItems.filter(item => 
+            !(item.type === 'diamond' && item.id === diamondId)
+        );
+    }
+    
+    updateSelectedItems();
+    updateOrderSummary();
+});
 
     // Update quantity
     $(document).on('change', '.item-quantity', function() {
@@ -689,61 +706,80 @@ $(function() {
     });
 
     function updateSelectedItems() {
-        const tbody = $('#selectedItemsBody');
-        const noItemsRow = $('#noItemsRow');
-        const orderSummary = $('#orderSummary');
+    const tbody = $('#selectedItemsBody');
+    const noItemsRow = $('#noItemsRow');
+    const orderSummary = $('#orderSummary');
+    
+    if (selectedItems.length === 0) {
+        noItemsRow.show();
+        orderSummary.hide();
+        tbody.find('tr:not(#noItemsRow)').remove();
+        return;
+    }
+    
+    noItemsRow.hide();
+    orderSummary.show();
+    
+    let html = '';
+    
+    selectedItems.forEach((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        const typeLabel = item.type === 'diamond' ? 'Diamond' : 
+                         item.type === 'jewelry' ? 'Jewelry' : 
+                         item.type === 'combo' ? 'Combo' : 'Product';
         
-        if (selectedItems.length === 0) {
-            noItemsRow.show();
-            orderSummary.hide();
-            tbody.find('tr:not(#noItemsRow)').remove();
-            return;
+        // ✅ Details HTML बनाएं - ERROR यहाँ आ रहा था
+        let detailsHtml = '';
+        if (item.type === 'diamond') {
+            detailsHtml = `
+                <small>
+                    ${item.certificate_number ? `Cert: ${item.certificate_number}<br>` : ''}
+                    ${item.carat_weight ? `${item.carat_weight}ct` : ''}
+                    ${item.color ? `, ${item.color}` : ''}
+                    ${item.clarity ? `/${item.clarity}` : ''}
+                </small>
+            `;
+        } else if (item.type === 'jewelry') {
+            // ✅ item.metal_color और item.shape check करें
+            const metalColor = item.metal_color || '';
+            const shape = item.shape || '';
+            const carat = item.carat || '';
+            
+            detailsHtml = `
+                <small>
+                    ${metalColor ? `${metalColor}<br>` : ''}
+                    ${carat ? `${carat}ct` : ''}
+                    ${shape ? `, ${shape}` : ''}
+                </small>
+            `;
         }
         
-        noItemsRow.hide();
-        orderSummary.show();
-        
-        let html = '';
-        
-        selectedItems.forEach((item, index) => {
-            const itemTotal = item.price * item.quantity;
-            const typeLabel = item.type === 'diamond' ? 'Diamond' : 
-                             item.type === 'jewelry' ? 'Jewelry' : 
-                             item.type === 'combo' ? 'Combo' : 'Product';
-            
-            html += `
-                <tr>
-                    <td>
-                        <span class="badge ${item.type === 'diamond' ? 'bg-warning' : 'bg-info'}">
-                            ${typeLabel}
-                        </span>
-                    </td>
-                    <td>${item.name}</td>
-                    <td>
-                        <small>
-                            ${item.type === 'diamond' ? 
-                                `Cert: ${item.certificate_number || 'N/A'}<br>${item.carat_weight || 'N/A'}ct, ${item.color || 'N/A'}/${item.clarity || 'N/A'}` : 
-                                `${item.metal_color ? item.metal_color + '<br>' : ''}${item.carat ? item.carat + 'ct' : ''}`
-                            }
-                        </small>
-                    </td>
-                    <td>
-                        <input type="number" class="form-control form-control-sm item-quantity" 
-                               value="${item.quantity}" min="1" max="99" data-index="${index}" style="width: 70px;">
-                    </td>
-                    <td>$${item.price.toFixed(2)}</td>
-                    <td>$${itemTotal.toFixed(2)}</td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-outline-danger remove-item" data-index="${index}">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        });
-        
-        tbody.html(html);
-    }
+        html += `
+            <tr>
+                <td>
+                    <span class="badge ${item.type === 'diamond' ? 'bg-warning' : 'bg-info'}">
+                        ${typeLabel}
+                    </span>
+                </td>
+                <td>${item.name}</td>
+                <td>${detailsHtml}</td>
+                <td>
+                    <input type="number" class="form-control form-control-sm item-quantity" 
+                           value="${item.quantity}" min="1" max="99" data-index="${index}" style="width: 70px;">
+                </td>
+                <td>$${item.price.toFixed(2)}</td>
+                <td>$${itemTotal.toFixed(2)}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-item" data-index="${index}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.html(html);
+}
 
     function updateOrderSummary() {
         const subtotal = selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);

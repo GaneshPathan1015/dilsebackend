@@ -34,15 +34,67 @@ class OrderController extends Controller
         return view('admin.DiamondMaster.Orders.index');
     }
 
+    // public function searchProducts(Request $request)
+    // {
+    //     $search = $request->input('search');
+
+    //     $products = Product::with(['variations', 'metalType'])
+    //         ->where(function ($query) use ($search) {
+    //             $query->where('products_name', 'like', "%{$search}%");
+    //         })
+    //         ->where('products_status', 1)
+    //         ->limit(20)
+    //         ->get();
+
+    //     $results = [];
+    //     foreach ($products as $product) {
+    //         foreach ($product->variations as $variation) {
+    //             $results[] = [
+    //                 'id' => $variation->id,
+    //                 'product_id' => $product->products_id,
+    //                 'name' => $product->products_name,
+    //                 'sku' => $variation->sku ?: $product->products_sku,
+    //                 'price' => $variation->price ?: $product->products_price,
+    //                 'regular_price' => $variation->regular_price ?: $product->products_price,
+    //                 'carat' => $variation->carat,
+    //                 'weight' => $variation->weight,
+    //                 'metal_color' => $variation->metalColor ? $variation->metalColor->dmt_name : null,
+    //                 'shape' => $variation->shape ? $variation->shape->shape_name : null,
+    //                 'stock' => $variation->stock,
+    //                 'type' => 'jewelry',
+    //                 'images' => $variation->images
+    //             ];
+    //         }
+
+    //         if ($product->variations->isEmpty()) {
+    //             $results[] = [
+    //                 'id' => $product->products_id,
+    //                 'product_id' => $product->products_id,
+    //                 'name' => $product->products_name,
+    //                 'sku' => $product->products_sku,
+    //                 'price' => $product->products_price,
+    //                 'regular_price' => $product->products_price,
+    //                 'carat' => null,
+    //                 'weight' => $product->products_weight,
+    //                 'metal_color' => $product->metalType ? $product->metalType->dmt_name : null,
+    //                 'shape' => null,
+    //                 'stock' => $product->products_quantity,
+    //                 'type' => 'jewelry',
+    //                 'images' => []
+    //             ];
+    //         }
+    //     }
+
+    //     return response()->json($results);
+    // }
+
     public function searchProducts(Request $request)
     {
         $search = $request->input('search');
 
         $products = Product::with(['variations', 'metalType'])
             ->where(function ($query) use ($search) {
-                $query->where('products_name', 'like', "%{$search}%")
-                    ->orWhere('products_sku', 'like', "%{$search}%")
-                    ->orWhere('master_sku', 'like', "%{$search}%");
+                $query->where('products_name', 'like', "%{$search}%");
             })
             ->where('products_status', 1)
             ->limit(20)
@@ -50,28 +102,32 @@ class OrderController extends Controller
 
         $results = [];
         foreach ($products as $product) {
-            foreach ($product->variations as $variation) {
+            // अगर variations हैं तो उन्हें दिखाएं
+            if ($product->variations->isNotEmpty()) {
+                foreach ($product->variations as $variation) {
+                    $results[] = [
+                        'id' => $variation->id, // ✅ ये IMPORTANT है - ये variation ID है
+                        'product_id' => $product->products_id, // ✅ Product ID अलग से
+                        'variation_id' => $variation->id, // ✅ Variation ID अलग से
+                        'name' => $product->products_name,
+                        'sku' => $variation->sku ?: $product->products_sku,
+                        'price' => $variation->price ?: $product->products_price,
+                        'regular_price' => $variation->regular_price ?: $product->products_price,
+                        'carat' => $variation->carat,
+                        'weight' => $variation->weight,
+                        'metal_color' => $variation->metalColor ? $variation->metalColor->dmt_name : null,
+                        'shape' => $variation->shape ? $variation->shape->shape_name : null,
+                        'stock' => $variation->stock,
+                        'type' => 'jewelry',
+                        'images' => $variation->images
+                    ];
+                }
+            } else {
+                // No variations - directly product
                 $results[] = [
-                    'id' => $variation->id,
+                    'id' => $product->products_id, // ✅ No variation, so product ID
                     'product_id' => $product->products_id,
-                    'name' => $product->products_name,
-                    'sku' => $variation->sku ?: $product->products_sku,
-                    'price' => $variation->price ?: $product->products_price,
-                    'regular_price' => $variation->regular_price ?: $product->products_price,
-                    'carat' => $variation->carat,
-                    'weight' => $variation->weight,
-                    'metal_color' => $variation->metalColor ? $variation->metalColor->dmt_name : null,
-                    'shape' => $variation->shape ? $variation->shape->shape_name : null,
-                    'stock' => $variation->stock,
-                    'type' => 'jewelry',
-                    'images' => $variation->images
-                ];
-            }
-
-            if ($product->variations->isEmpty()) {
-                $results[] = [
-                    'id' => $product->products_id,
-                    'product_id' => $product->products_id,
+                    'variation_id' => null, // ✅ No variation
                     'name' => $product->products_name,
                     'sku' => $product->products_sku,
                     'price' => $product->products_price,
@@ -89,6 +145,7 @@ class OrderController extends Controller
 
         return response()->json($results);
     }
+
 
     public function searchDiamonds(Request $request)
     {
@@ -251,22 +308,53 @@ class OrderController extends Controller
         }
     }
 
+    // public function show(Order $order)
+    // {
+    //     try {
+    //         $processedItems = $this->processItemsForOrder($order);
+
+    //         return view('admin.DiamondMaster.Orders.invoice', compact('order', 'processedItems'));
+    //     } catch (\Exception $e) {
+    //         Log::error('Error in OrderController@show: ' . $e->getMessage());
+    //         Log::error('Error trace: ' . $e->getTraceAsString());
+
+    //         return response()->view('admin.DiamondMaster.Orders.invoice_error', [
+    //             'message' => 'Unable to load order details: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+    // OrderController के show method में
     public function show(Order $order)
-    {
-        try {
-            $processedItems = $this->processItemsForOrder($order);
+{
+    try {
+        $processedItems = $this->processItemsForOrder($order);
+        
+        // ✅ Tax details fetch करें
+        $taxDetails = OrderItemTax::where('order_id', $order->id)->get();
+        
+        // ✅ Tax summary calculate करें
+        $taxSummary = [
+            'total_taxable' => $taxDetails->sum('taxable_value'),
+            'total_tax' => $taxDetails->sum('tax_amount'),
+            'cgst' => $taxDetails->where('tax_type', 'CGST')->sum('tax_amount'),
+            'sgst' => $taxDetails->where('tax_type', 'SGST')->sum('tax_amount'),
+            'igst' => $taxDetails->where('tax_type', 'IGST')->sum('tax_amount'),
+        ];
 
-            return view('admin.DiamondMaster.Orders.invoice', compact('order', 'processedItems'));
-        } catch (\Exception $e) {
-            Log::error('Error in OrderController@show: ' . $e->getMessage());
-            Log::error('Error trace: ' . $e->getTraceAsString());
-
-            return response()->view('admin.DiamondMaster.Orders.invoice_error', [
-                'message' => 'Unable to load order details: ' . $e->getMessage()
-            ], 500);
-        }
+        return view('admin.DiamondMaster.Orders.invoice', compact(
+            'order', 
+            'processedItems', 
+            'taxDetails', 
+            'taxSummary'
+        ));
+    } catch (\Exception $e) {
+        Log::error('Error in OrderController@show: ' . $e->getMessage());
+        return response()->view('admin.DiamondMaster.Orders.invoice_error', [
+            'message' => 'Unable to load order details: ' . $e->getMessage()
+        ], 500);
     }
-    
+}
+
     public function downloadInvoice(Order $order)
     {
         $processedItems = $this->processItemsForOrder($order);
@@ -642,14 +730,269 @@ class OrderController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    // public function store(Request $request)
+    // {
+    //     $validator = Validator::make($request->all(), [
+    //         'user_id'        => 'required|exists:users,id',
+    //         'user_name'      => 'required|string',
+    //         'contact_number' => 'required|string',
+    //         'item_details'   => 'required|json',
+    //         'total_price'    => 'required|numeric',
+    //         'address'        => 'required|json',
+    //         'billing_address' => 'nullable|json',
+    //         'order_status'   => 'required|string',
+    //         'payment_mode'   => 'required|string',
+    //         'payment_status' => 'required|string',
+    //         'transaction_id' => 'nullable|string',
+    //         'is_gift'        => 'nullable|boolean',
+    //         'notes'          => 'nullable|string',
+    //         'coupon_discount' => 'nullable|numeric',
+    //         'coupon_code'    => 'nullable|string',
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return redirect()->back()
+    //             ->withErrors($validator)
+    //             ->withInput();
+    //     }
+
+    //     $validated = $validator->validated();
+    //     $validated['order_id'] = 'ORD-' . Str::uuid();
+
+    //     // ✅ COUPON VALIDATION (Admin side)
+    //     if (!empty($validated['coupon_code'])) {
+    //         $itemDetails = json_decode($validated['item_details'], true);
+    //         $items = $itemDetails['items'] ?? [];
+    //         $cartTotalWithoutDiscount = 0;
+
+    //         foreach ($items as $item) {
+    //             $quantity = $item['quantity'] ?? $item['itemQuantity'] ?? 1;
+    //             $price = $item['price'] ?? 0;
+    //             $cartTotalWithoutDiscount += ($price * $quantity);
+    //         }
+
+    //         $couponValidation = Order::validateCoupon($validated['coupon_code'], $cartTotalWithoutDiscount);
+
+    //         if (!$couponValidation['valid']) {
+    //             return redirect()->back()
+    //                 ->with('error', $couponValidation['message'])
+    //                 ->withInput();
+    //         }
+
+    //         $coupon = $couponValidation['coupon'];
+    //         $calculatedDiscount = $coupon->calculateDiscount($cartTotalWithoutDiscount);
+
+    //         if (abs($calculatedDiscount - $validated['coupon_discount']) > 0.01) {
+    //             return redirect()->back()
+    //                 ->with('error', 'Coupon discount mismatch. Please try again.')
+    //                 ->withInput();
+    //         }
+    //     }
+
+    //     // Parse the payload
+    //     $itemDetails = json_decode($validated['item_details'], true);
+    //     $payload = $itemDetails['items'] ?? [];
+
+    //     // Initialize arrays for items_id and quantities
+    //     $itemsId = [
+    //         'diamond' => [],
+    //         'jewelry' => [],
+    //         'gift'    => [],
+    //         'build'   => [],
+    //         'combo'   => [],
+    //     ];
+
+    //     $quantities = [
+    //         'diamond' => 0,
+    //         'jewelry' => 0,
+    //         'gift'    => 0,
+    //         'build'   => 0,
+    //         'combo'   => 0,
+    //         'total'   => 0
+    //     ];
+
+    //     // ✅ Array to store product variations for tax calculation
+    //     $productVariationsForTax = [];
+
+    //     // Process each item in the payload
+    //     foreach ($payload as $item) {
+    //         $quantity = $item['quantity'] ?? $item['itemQuantity'] ?? 1;
+
+    //         switch ($item['productType'] ?? null) {
+    //             case 'diamond':
+    //                 if (!empty($item['diamondid'])) {
+    //                     $itemsId['diamond'][] = [
+    //                         'id' => $item['diamondid'],
+    //                         'quantity' => $quantity,
+    //                         'price' => $item['price'] ?? 0,
+    //                         'carat' => $item['carat'] ?? null,
+    //                         'shape' => $item['shape'] ?? null
+    //                     ];
+    //                     $quantities['diamond'] += $quantity;
+    //                 }
+    //                 break;
+
+    //             case 'jewelry':
+    //                 if (!empty($item['id'])) {
+    //                     $itemsId['jewelry'][] = [
+    //                         'id' => $item['id'],
+    //                         'quantity' => $quantity,
+    //                         'price' => $item['price'] ?? 0,
+    //                         'title' => $item['title'] ?? '',
+    //                         'type' => $item['type'] ?? ''
+    //                     ];
+    //                     $quantities['jewelry'] += $quantity;
+    //                     // ✅ Store for tax calculation
+    //                     if (isset($item['variation_id'])) {
+    //                         $productVariationsForTax[] = [
+    //                             'product_variation_id' => $item['variation_id'],
+    //                             'order_item_id' => null, // Will be set after order creation
+    //                             'price' => $item['price'] ?? 0,
+    //                             'quantity' => $quantity
+    //                         ];
+    //                     }
+    //                 }
+    //                 break;
+
+    //             case 'gift':
+    //                 if (!empty($item['id'])) {
+    //                     $itemsId['gift'][] = [
+    //                         'id' => $item['id'],
+    //                         'quantity' => $quantity,
+    //                         'price' => $item['price'] ?? 0,
+    //                         'title' => $item['name'] ?? '',
+    //                         'type' => $item['productType'] ?? ''
+    //                     ];
+    //                     $quantities['gift'] += $quantity;
+    //                 }
+    //                 break;
+
+    //             case 'build':
+    //                 if (!empty($item['id'])) {
+    //                     $itemsId['build'][] = [
+    //                         'id'   => $item['id'],
+    //                         'size' => $item['size'] ?? null,
+    //                         'quantity' => $quantity,
+    //                         'price' => $item['price'] ?? 0,
+    //                         'specifications' => $item['specifications'] ?? []
+    //                     ];
+    //                     $quantities['build'] += $quantity;
+    //                 }
+    //                 break;
+
+    //             case 'combo':
+    //                 $itemsId['combo'][] = [
+    //                     'diamond_id' => $item['diamond']['diamondid'] ?? null,
+    //                     'product_id' => $item['ring']['id'] ?? null,
+    //                     'size'       => $item['size'] ?? null,
+    //                     'quantity'   => $quantity,
+    //                     'price'      => $item['price'] ?? 0,
+    //                     'diamond_details' => $item['diamond'] ?? [],
+    //                     'ring_details' => $item['ring'] ?? []
+    //                 ];
+    //                 $quantities['combo'] += $quantity;
+    //                 break;
+    //         }
+
+    //         $quantities['total'] += $quantity;
+    //     }
+
+    //     // Calculate total quantities
+    //     $validated['total_quantity'] = $quantities['total'];
+    //     $validated['quantities'] = $quantities;
+
+    //     // Decide product type for DB
+    //     $nonEmptyTypes = collect($itemsId)->filter(fn($ids) => !empty($ids))->keys();
+
+    //     if ($nonEmptyTypes->isEmpty()) {
+    //         $productType = 'empty';
+    //     } elseif ($nonEmptyTypes->count() === 1) {
+    //         $productType = $nonEmptyTypes->first();
+    //     } else {
+    //         $productType = 'multiple';
+    //     }
+
+    //     // Add both product type and items_id into validated array
+    //     $validated['items_id'] = $itemsId;
+    //     $validated['product_type'] = $productType;
+
+    //     // If billing address is not provided, use shipping address
+    //     if (empty($validated['billing_address']) && !empty($validated['address'])) {
+    //         $validated['billing_address'] = $validated['address'];
+    //     }
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $order = Order::create($validated);
+
+    //         // ✅ Calculate and create tax records for each product variation
+    //         $isInterState = $this->checkIfInterState($validated['address'] ?? []);
+
+    //         $itemsForTax = [];
+
+    //         foreach ($payload as $item) {
+    //             $itemsForTax[] = [
+    //                 'type' => $item['productType'] ?? 'jewelry',
+    //                 'id' => $item['id'] ?? null,
+    //                 'variation_id' => $item['variation_id'] ?? null,
+    //                 'price' => $item['price'] ?? 0,
+    //                 'quantity' => $item['quantity'] ?? $item['itemQuantity'] ?? 1
+    //             ];
+    //         }
+
+    //         $this->saveOrderTaxes($order, $itemsForTax, $isInterState);
+
+    //         foreach ($productVariationsForTax as $item) {
+    //             $taxRecords = OrderItemTax::createForOrderItem(
+    //                 $order->id,
+    //                 null, // order_item_id - you might need to create order items first
+    //                 $item['product_variation_id'],
+    //                 $item['price'] * $item['quantity'],
+    //                 $isInterState
+    //             );
+
+    //             // Insert tax records
+    //             foreach ($taxRecords as $taxRecord) {
+    //                 OrderItemTax::create($taxRecord);
+    //             }
+    //         }
+
+    //         // ✅ NEW: Send confirmation emails
+    //         $this->sendOrderConfirmationEmail($order);
+
+    //         DB::commit();
+
+    //         return redirect()->route('admin.orders.index')
+    //             ->with('success', 'Order created successfully!');
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error("Admin Order creation failed: " . $e->getMessage());
+
+    //         return redirect()->back()
+    //             ->with('error', 'Failed to save order: ' . $e->getMessage())
+    //             ->withInput();
+    //     }
+    // }
+
+     public function store(Request $request)
     {
+        // ✅ AJAX request के लिए JSON response
+        if ($request->ajax()) {
+            return $this->storeAjax($request);
+        }
+
+        // ✅ Regular form submission के लिए
         $validator = Validator::make($request->all(), [
             'user_id'        => 'required|exists:users,id',
             'user_name'      => 'required|string',
             'contact_number' => 'required|string',
             'item_details'   => 'required|json',
             'total_price'    => 'required|numeric',
+            'shipping_cost'  => 'nullable|numeric',
+            'discount'       => 'nullable|numeric',
+            'coupon_code'    => 'nullable|string',
+            'coupon_discount' => 'nullable|numeric',
             'address'        => 'required|json',
             'billing_address' => 'nullable|json',
             'order_status'   => 'required|string',
@@ -658,8 +1001,6 @@ class OrderController extends Controller
             'transaction_id' => 'nullable|string',
             'is_gift'        => 'nullable|boolean',
             'notes'          => 'nullable|string',
-            'coupon_discount' => 'nullable|numeric',
-            'coupon_code'    => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -671,14 +1012,14 @@ class OrderController extends Controller
         $validated = $validator->validated();
         $validated['order_id'] = 'ORD-' . Str::uuid();
 
-        // ✅ COUPON VALIDATION (Admin side)
+        // ✅ COUPON VALIDATION
         if (!empty($validated['coupon_code'])) {
             $itemDetails = json_decode($validated['item_details'], true);
             $items = $itemDetails['items'] ?? [];
             $cartTotalWithoutDiscount = 0;
 
             foreach ($items as $item) {
-                $quantity = $item['quantity'] ?? $item['itemQuantity'] ?? 1;
+                $quantity = $item['quantity'] ?? 1;
                 $price = $item['price'] ?? 0;
                 $cartTotalWithoutDiscount += ($price * $quantity);
             }
@@ -694,7 +1035,7 @@ class OrderController extends Controller
             $coupon = $couponValidation['coupon'];
             $calculatedDiscount = $coupon->calculateDiscount($cartTotalWithoutDiscount);
 
-            if (abs($calculatedDiscount - $validated['coupon_discount']) > 0.01) {
+            if (abs($calculatedDiscount - ($validated['coupon_discount'] ?? 0)) > 0.01) {
                 return redirect()->back()
                     ->with('error', 'Coupon discount mismatch. Please try again.')
                     ->withInput();
@@ -723,46 +1064,61 @@ class OrderController extends Controller
             'total'   => 0
         ];
 
-        // ✅ Array to store product variations for tax calculation
-        $productVariationsForTax = [];
+        // ✅ Array to store items for tax calculation
+        $itemsForTax = [];
 
         // Process each item in the payload
         foreach ($payload as $item) {
-            $quantity = $item['quantity'] ?? $item['itemQuantity'] ?? 1;
+            $type = $item['productType'] ?? $item['type'] ?? 'jewelry';
+            $quantity = $item['quantity'] ?? 1;
 
-            switch ($item['productType'] ?? null) {
+            switch ($type) {
                 case 'diamond':
-                    if (!empty($item['diamondid'])) {
+                    $diamondId = $item['id'] ?? $item['diamondid'] ?? null;
+                    if (!empty($diamondId)) {
                         $itemsId['diamond'][] = [
-                            'id' => $item['diamondid'],
+                            'id' => $diamondId,
                             'quantity' => $quantity,
                             'price' => $item['price'] ?? 0,
+                            'certificate_number' => $item['certificate_number'] ?? null,
                             'carat' => $item['carat'] ?? null,
                             'shape' => $item['shape'] ?? null
                         ];
                         $quantities['diamond'] += $quantity;
+                        
+                        // ✅ Diamond के लिए tax array
+                        $itemsForTax[] = [
+                            'type' => 'diamond',
+                            'id' => $diamondId,
+                            'price' => $item['price'] ?? 0,
+                            'quantity' => $quantity,
+                            'name' => $item['name'] ?? 'Diamond'
+                        ];
                     }
                     break;
 
                 case 'jewelry':
-                    if (!empty($item['id'])) {
+                    $productId = $item['id'] ?? null;
+                    if (!empty($productId)) {
                         $itemsId['jewelry'][] = [
-                            'id' => $item['id'],
+                            'id' => $productId,
+                            'variation_id' => $item['variation_id'] ?? null,
                             'quantity' => $quantity,
                             'price' => $item['price'] ?? 0,
-                            'title' => $item['title'] ?? '',
-                            'type' => $item['type'] ?? ''
+                            'title' => $item['title'] ?? $item['name'] ?? '',
+                            'type' => $item['type'] ?? 'jewelry'
                         ];
                         $quantities['jewelry'] += $quantity;
-                         // ✅ Store for tax calculation
-                        if (isset($item['variation_id'])) {
-                            $productVariationsForTax[] = [
-                                'product_variation_id' => $item['variation_id'],
-                                'order_item_id' => null, // Will be set after order creation
-                                'price' => $item['price'] ?? 0,
-                                'quantity' => $quantity
-                            ];
-                        }
+                        
+                        // ✅ Jewelry के लिए tax array
+                        $itemsForTax[] = [
+                            'type' => 'jewelry',
+                            'product_id' => $productId,
+                            'variation_id' => $item['variation_id'] ?? null,
+                            'price' => $item['price'] ?? 0,
+                            'quantity' => $quantity,
+                            'name' => $item['name'] ?? $item['title'] ?? 'Jewelry'
+                        ];
                     }
                     break;
 
@@ -772,8 +1128,8 @@ class OrderController extends Controller
                             'id' => $item['id'],
                             'quantity' => $quantity,
                             'price' => $item['price'] ?? 0,
-                            'title' => $item['name'] ?? '',
-                            'type' => $item['productType'] ?? ''
+                            'name' => $item['name'] ?? '',
+                            'type' => $type
                         ];
                         $quantities['gift'] += $quantity;
                     }
@@ -794,8 +1150,8 @@ class OrderController extends Controller
 
                 case 'combo':
                     $itemsId['combo'][] = [
-                        'diamond_id' => $item['diamond']['diamondid'] ?? null,
-                        'product_id' => $item['ring']['id'] ?? null,
+                        'diamond_id' => $item['diamond']['diamondid'] ?? $item['diamond_id'] ?? null,
+                        'product_id' => $item['ring']['id'] ?? $item['product_id'] ?? null,
                         'size'       => $item['size'] ?? null,
                         'quantity'   => $quantity,
                         'price'      => $item['price'] ?? 0,
@@ -834,30 +1190,21 @@ class OrderController extends Controller
         }
 
         try {
-            // ✅ DB TRANSACTION USE करें
             DB::beginTransaction();
 
+            // ✅ Order create करें
             $order = Order::create($validated);
 
-             // ✅ Calculate and create tax records for each product variation
-            $isInterState = $this->checkIfInterState($validated['address'] ?? []);
+            // ✅ टैक्स सेव करें
+            $addressArray = json_decode($validated['address'], true);
+            $isInterState = $this->checkIfInterState($addressArray);
             
-            foreach ($productVariationsForTax as $item) {
-                $taxRecords = OrderItemTax::createForOrderItem(
-                    $order->id,
-                    null, // order_item_id - you might need to create order items first
-                    $item['product_variation_id'],
-                    $item['price'] * $item['quantity'],
-                    $isInterState
-                );
-                
-                // Insert tax records
-                foreach ($taxRecords as $taxRecord) {
-                    OrderItemTax::create($taxRecord);
-                }
+            // ✅ Items for tax calculation
+            if (!empty($itemsForTax)) {
+                $this->saveOrderTaxes($order, $itemsForTax, $isInterState);
             }
 
-            // ✅ NEW: Send confirmation emails
+            // ✅ Send confirmation emails
             $this->sendOrderConfirmationEmail($order);
 
             DB::commit();
@@ -868,6 +1215,7 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Admin Order creation failed: " . $e->getMessage());
+            Log::error("Error trace: " . $e->getTraceAsString());
 
             return redirect()->back()
                 ->with('error', 'Failed to save order: ' . $e->getMessage())
@@ -875,13 +1223,217 @@ class OrderController extends Controller
         }
     }
 
-     private function checkIfInterState($address)
+    private function storeAjax(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'user_id'        => 'required|exists:users,id',
+            'user_name'      => 'required|string',
+            'contact_number' => 'required|string',
+            'item_details'   => 'required|json',
+            'total_price'    => 'required|numeric',
+            'shipping_cost'  => 'nullable|numeric',
+            'discount'       => 'nullable|numeric',
+            'coupon_code'    => 'nullable|string',
+            'coupon_discount' => 'nullable|numeric',
+            'address'        => 'required|json',
+            'billing_address' => 'nullable|json',
+            'order_status'   => 'required|string',
+            'payment_mode'   => 'required|string',
+            'payment_status' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+        $validated['order_id'] = 'ORD-' . Str::uuid();
+
+        // ✅ Parse item_details
+        $itemDetails = json_decode($validated['item_details'], true);
         
-        $businessState = 'Maharashtra'; // Your business state
-        $shippingState = $address['state'] ?? $address['administrative_area'] ?? null;
-        
-        return $shippingState && $shippingState !== $businessState;
+        if (!isset($itemDetails['items']) || !is_array($itemDetails['items'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid item details format'
+            ], 422);
+        }
+
+        $items = $itemDetails['items'];
+
+        // ✅ COUPON VALIDATION
+        if (!empty($validated['coupon_code'])) {
+            $cartTotalWithoutDiscount = 0;
+
+            foreach ($items as $item) {
+                $quantity = $item['quantity'] ?? 1;
+                $price = $item['price'] ?? 0;
+                $cartTotalWithoutDiscount += ($price * $quantity);
+            }
+
+            $couponValidation = Order::validateCoupon($validated['coupon_code'], $cartTotalWithoutDiscount);
+
+            if (!$couponValidation['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $couponValidation['message']
+                ], 422);
+            }
+
+            $coupon = $couponValidation['coupon'];
+            $calculatedDiscount = $coupon->calculateDiscount($cartTotalWithoutDiscount);
+
+            if (abs($calculatedDiscount - ($validated['coupon_discount'] ?? 0)) > 0.01) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Coupon discount mismatch. Please try again.'
+                ], 422);
+            }
+        }
+
+        // Initialize arrays for items_id and quantities
+        $itemsId = [
+            'diamond' => [],
+            'jewelry' => [],
+            'gift'    => [],
+            'build'   => [],
+            'combo'   => [],
+        ];
+
+        $quantities = [
+            'diamond' => 0,
+            'jewelry' => 0,
+            'gift'    => 0,
+            'build'   => 0,
+            'combo'   => 0,
+            'total'   => 0
+        ];
+
+        // ✅ Array to store items for tax calculation
+        $itemsForTax = [];
+
+        // Process each item in the payload
+        foreach ($items as $item) {
+            $type = $item['productType'] ?? $item['type'] ?? 'jewelry';
+            $quantity = $item['quantity'] ?? 1;
+
+            switch ($type) {
+                case 'diamond':
+                    $diamondId = $item['id'] ?? $item['diamondid'] ?? null;
+                    if (!empty($diamondId)) {
+                        $itemsId['diamond'][] = [
+                            'id' => $diamondId,
+                            'quantity' => $quantity,
+                            'price' => $item['price'] ?? 0,
+                            'certificate_number' => $item['certificate_number'] ?? null,
+                            'carat' => $item['carat'] ?? null,
+                            'shape' => $item['shape'] ?? null
+                        ];
+                        $quantities['diamond'] += $quantity;
+                        
+                        // ✅ Diamond के लिए tax array
+                        $itemsForTax[] = [
+                            'type' => 'diamond',
+                            'id' => $diamondId,
+                            'price' => $item['price'] ?? 0,
+                            'quantity' => $quantity,
+                            'name' => $item['name'] ?? 'Diamond'
+                        ];
+                    }
+                    break;
+
+                case 'jewelry':
+                    $productId = $item['id'] ?? null;
+                    if (!empty($productId)) {
+                        $itemsId['jewelry'][] = [
+                            'id' => $productId,
+                            'variation_id' => $item['variation_id'] ?? null,
+                            'quantity' => $quantity,
+                            'price' => $item['price'] ?? 0,
+                            'title' => $item['title'] ?? $item['name'] ?? '',
+                            'type' => $item['type'] ?? 'jewelry'
+                        ];
+                        $quantities['jewelry'] += $quantity;
+                        
+                        // ✅ Jewelry के लिए tax array
+                        $itemsForTax[] = [
+                            'type' => 'jewelry',
+                            'product_id' => $productId,
+                            'variation_id' => $item['variation_id'] ?? null,
+                            'price' => $item['price'] ?? 0,
+                            'quantity' => $quantity,
+                            'name' => $item['name'] ?? $item['title'] ?? 'Jewelry'
+                        ];
+                    }
+                    break;
+            }
+
+            $quantities['total'] += $quantity;
+        }
+
+        // Calculate total quantities
+        $validated['total_quantity'] = $quantities['total'];
+        $validated['quantities'] = $quantities;
+
+        // Decide product type for DB
+        $nonEmptyTypes = collect($itemsId)->filter(fn($ids) => !empty($ids))->keys();
+
+        if ($nonEmptyTypes->isEmpty()) {
+            $productType = 'empty';
+        } elseif ($nonEmptyTypes->count() === 1) {
+            $productType = $nonEmptyTypes->first();
+        } else {
+            $productType = 'multiple';
+        }
+
+        // Add both product type and items_id into validated array
+        $validated['items_id'] = $itemsId;
+        $validated['product_type'] = $productType;
+
+        // If billing address is not provided, use shipping address
+        if (empty($validated['billing_address']) && !empty($validated['address'])) {
+            $validated['billing_address'] = $validated['address'];
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // ✅ Order create करें
+            $order = Order::create($validated);
+
+            // ✅ टैक्स सेव करें
+            $addressArray = json_decode($validated['address'], true);
+            $isInterState = $this->checkIfInterState($addressArray);
+            
+            // ✅ Items for tax calculation
+            if (!empty($itemsForTax)) {
+                $this->saveOrderTaxes($order, $itemsForTax, $isInterState);
+            }
+
+            // ✅ Send confirmation emails
+            $this->sendOrderConfirmationEmail($order);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order created successfully!',
+                'order_id' => $order->order_id
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Admin Order creation failed: " . $e->getMessage());
+            Log::error("Error trace: " . $e->getTraceAsString());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save order: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request, Order $order)
@@ -935,19 +1487,19 @@ class OrderController extends Controller
         }
     }
 
-     // ✅ NEW: Add email confirmation method in Admin Controller
+    // ✅ NEW: Add email confirmation method in Admin Controller
     private function sendOrderConfirmationEmail($order)
     {
         try {
             $userEmail = $order->user->email ?? $order->address_email ?? null;
             $adminEmail = config('mail.from.address');
-            
+
             Log::info('=== ADMIN ORDER EMAIL SENDING STARTED ===');
             Log::info('Order ID: ' . $order->order_id);
             Log::info('User Email: ' . $userEmail);
             Log::info('Admin Email: ' . $adminEmail);
             Log::info('Mail From Address: ' . config('mail.from.address'));
-            
+
             if (!$userEmail) {
                 Log::warning('No user email found for order confirmation: ' . $order->order_id);
             }
@@ -957,7 +1509,7 @@ class OrderController extends Controller
             if ($order->item_details) {
                 $itemDetails = json_decode($order->item_details, true);
                 $items = $itemDetails['items'] ?? [];
-                
+
                 foreach ($items as $item) {
                     $processedItems[] = [
                         'name' => $item['name'] ?? $item['title'] ?? 'Product',
@@ -992,11 +1544,241 @@ class OrderController extends Controller
             Log::info('Admin email sent successfully');
 
             Log::info('=== ADMIN ORDER EMAIL SENDING COMPLETED ===');
-            
         } catch (\Exception $e) {
             Log::error('Error sending order confirmation emails from Admin: ' . $e->getMessage());
             Log::error('Error trace: ' . $e->getTraceAsString());
             // Don't throw error, just log it so order creation doesn't fail
         }
+    }
+
+    private function saveOrderTaxes($order, $items, $isInterState)
+    {
+        try {
+            foreach ($items as $item) {
+                if ($item['type'] === 'jewelry') {
+                    $this->saveJewelryTaxes($order, $item, $isInterState);
+                } elseif ($item['type'] === 'diamond') {
+                    $this->saveDiamondTaxes($order, $item, $isInterState);
+                }
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Error saving order taxes: ' . $e->getMessage());
+            Log::error('Error trace: ' . $e->getTraceAsString());
+            return false;
+        }
+    }
+
+private function saveJewelryTaxes($order, $item, $isInterState)
+{
+    try {
+        if (isset($item['variation_id']) && $item['variation_id']) {
+            $variation = ProductVariation::find($item['variation_id']);
+            
+            if ($variation) {
+                $product = $variation->product;
+                $quantity = $item['quantity'];
+                $unitPrice = $item['price'];
+                $totalPrice = $unitPrice * $quantity;
+                $makingCharges = ($variation->making_charges ?? 0) * $quantity;
+                
+                // ✅ तुम्हारे variation से dynamic tax rates लो
+                $goldGstRate = $variation->gold_gst_rate ?? 0;
+                $diamondGstRate = $variation->diamond_gst_rate ?? 0;
+                $makingGstRate = $variation->making_gst_rate ?? 0;
+                
+                // ✅ सिर्फ Gold GST (हमेशा)
+                if ($goldGstRate > 0) {
+                    OrderItemTax::create([
+                        'order_id' => $order->id,
+                        'product_id' => $product->products_id,
+                        'product_variation_id' => $variation->id,
+                        'component_type' => 'gold_tax',
+                        'hsn_code' => '7113',
+                        'tax_type' => 'GST',
+                        'taxable_value' => $totalPrice,
+                        'tax_rate' => $goldGstRate,
+                        'tax_amount' => ($totalPrice * $goldGstRate) / 100,
+                        'item_name' => $product->products_name,
+                        'item_type' => 'jewelry',
+                        'quantity' => $quantity,
+                        'unit_price' => $unitPrice,
+                        'description' => 'Gold GST'
+                    ]);
+                }
+                
+                // ✅ Diamond GST सिर्फ तभी जब diamond_weight > 0 हो
+                if ($diamondGstRate > 0 && ($variation->diamond_weight ?? 0) > 0) {
+                    OrderItemTax::create([
+                        'order_id' => $order->id,
+                        'product_id' => $product->products_id,
+                        'product_variation_id' => $variation->id,
+                        'component_type' => 'diamond_tax',
+                        'hsn_code' => '7102',
+                        'tax_type' => 'GST',
+                        'taxable_value' => $totalPrice,
+                        'tax_rate' => $diamondGstRate,
+                        'tax_amount' => ($totalPrice * $diamondGstRate) / 100,
+                        'item_name' => $product->products_name . ' (Diamond)',
+                        'item_type' => 'jewelry',
+                        'quantity' => $quantity,
+                        'unit_price' => $unitPrice,
+                        'description' => 'Diamond GST'
+                    ]);
+                }
+                
+                // ✅ Making Charges GST सिर्फ तभी जब making_charges > 0 हो
+                if ($makingGstRate > 0 && $makingCharges > 0) {
+                    OrderItemTax::create([
+                        'order_id' => $order->id,
+                        'product_id' => $product->products_id,
+                        'product_variation_id' => $variation->id,
+                        'component_type' => 'making_tax',
+                        'hsn_code' => '7113',
+                        'tax_type' => 'GST',
+                        'taxable_value' => $makingCharges,
+                        'tax_rate' => $makingGstRate,
+                        'tax_amount' => ($makingCharges * $makingGstRate) / 100,
+                        'item_name' => $product->products_name . ' - Making Charges',
+                        'item_type' => 'jewelry',
+                        'quantity' => $quantity,
+                        'unit_price' => $variation->making_charges ?? 0,
+                        'description' => 'Making Charges GST'
+                    ]);
+                }
+            }
+        }
+    } catch (\Exception $e) {
+        Log::error('Error saving jewelry taxes: ' . $e->getMessage());
+    }
+}
+
+    private function saveDiamondTaxes($order, $item, $isInterState)
+    {
+        try {
+            $diamond = DiamondMaster::find($item['id']);
+            
+            if ($diamond) {
+                $quantity = $item['quantity'];
+                $unitPrice = $item['price'];
+                $totalPrice = $unitPrice * $quantity;
+                
+                // Diamond GST rate (0.25%)
+                $diamondGstRate = 0.25;
+                
+                // Diamond name बनाएं
+                $diamondName = 'Diamond - ' . 
+                              ($diamond->certificate_number ?? $diamond->stock_number ?? 'N/A') . ' - ' .
+                              ($diamond->carat_weight ?? '') . 'ct ' .
+                              ($diamond->shape->name ?? '');
+                
+                // Create tax record
+                OrderItemTax::create([
+                    'order_id' => $order->id,
+                    'diamond_id' => $diamond->diamondid,
+                    'component_type' => 'diamond_tax',
+                    'hsn_code' => '7102',
+                    'tax_type' => $isInterState ? 'IGST' : 'CGST',
+                    'taxable_value' => $totalPrice,
+                    'tax_rate' => $diamondGstRate,
+                    'tax_amount' => ($totalPrice * $diamondGstRate) / 100,
+                    'item_name' => $diamondName,
+                    'item_type' => 'diamond',
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'description' => 'Diamond GST'
+                ]);
+                
+                // SGST भी (अगर intrastate है)
+                if (!$isInterState) {
+                    OrderItemTax::create([
+                        'order_id' => $order->id,
+                        'diamond_id' => $diamond->diamondid,
+                        'component_type' => 'diamond_tax',
+                        'hsn_code' => '7102',
+                        'tax_type' => 'SGST',
+                        'taxable_value' => $totalPrice,
+                        'tax_rate' => $diamondGstRate,
+                        'tax_amount' => ($totalPrice * $diamondGstRate) / 100,
+                        'item_name' => $diamondName,
+                        'item_type' => 'diamond',
+                        'quantity' => $quantity,
+                        'unit_price' => $unitPrice,
+                        'description' => 'Diamond SGST'
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error saving diamond taxes: ' . $e->getMessage());
+        }
+    }
+
+    private function createTaxRecord($order, $data, $isInterState)
+    {
+        // Calculate tax amount
+        $taxAmount = ($data['taxable_value'] * $data['tax_rate']) / 100;
+        
+        // Create CGST/IGST record
+        OrderItemTax::create([
+            'order_id' => $order->id,
+            'product_id' => $data['product_id'] ?? null,
+            'product_variation_id' => $data['product_variation_id'] ?? null,
+            'diamond_id' => $data['diamond_id'] ?? null,
+            'component_type' => $data['component_type'],
+            'hsn_code' => $data['hsn_code'],
+            'tax_type' => $data['tax_type'],
+            'taxable_value' => $data['taxable_value'],
+            'tax_rate' => $data['tax_rate'],
+            'tax_amount' => $taxAmount,
+            'item_name' => $data['item_name'],
+            'item_type' => $data['item_type'],
+            'quantity' => $data['quantity'],
+            'unit_price' => $data['unit_price'],
+            'description' => $data['description']
+        ]);
+        
+        // Create SGST record if intrastate
+        if (!$isInterState && $data['tax_type'] === 'CGST') {
+            OrderItemTax::create([
+                'order_id' => $order->id,
+                'product_id' => $data['product_id'] ?? null,
+                'product_variation_id' => $data['product_variation_id'] ?? null,
+                'diamond_id' => $data['diamond_id'] ?? null,
+                'component_type' => $data['component_type'],
+                'hsn_code' => $data['hsn_code'],
+                'tax_type' => 'SGST',
+                'taxable_value' => $data['taxable_value'],
+                'tax_rate' => $data['tax_rate'],
+                'tax_amount' => $taxAmount,
+                'item_name' => $data['item_name'],
+                'item_type' => $data['item_type'],
+                'quantity' => $data['quantity'],
+                'unit_price' => $data['unit_price'],
+                'description' => $data['description'] . ' (SGST)'
+            ]);
+        }
+    }
+
+    private function checkIfInterState($address)
+    {
+        if (!is_array($address)) {
+            return false;
+        }
+        
+        // Default business state (आपका business जहाँ है)
+        $businessState = 'Maharashtra';
+        
+        // Get shipping state from address
+        $shippingState = $address['state'] ?? 
+                        $address['administrative_area'] ?? 
+                        $address['province'] ?? null;
+        
+        // यदि state नहीं मिल रहा या same है तो intrastate
+        if (!$shippingState || $shippingState === $businessState) {
+            return false; // Intrastate (CGST + SGST)
+        }
+        
+        return true; // Interstate (IGST)
     }
 }

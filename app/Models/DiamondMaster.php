@@ -94,6 +94,28 @@ class DiamondMaster extends Model
         return $this->belongsTo(DiamondFancyColor::class, 'fancy_color_overtone', 'fco_id');
     }
 
+    public function taxRate()
+    {
+        return $this->belongsTo(TaxRate::class, 'tax_rate_id');
+    }
+
+    public function getDiamondGstRateAttribute()
+    {
+        return $this->taxRate ? $this->taxRate->rate : 0.25;
+    }
+
+    public function getDiamondGstAmountAttribute()
+    {
+        $price = $this->price ?? 0;
+        $rate = $this->diamond_gst_rate;
+        return round(($price * $rate) / 100, 2);
+    }
+
+    public function getHsnCodeAttribute()
+    {
+        return '7102';
+    }
+
     protected $fillable = [
         'diamond_type',
         'quantity',
