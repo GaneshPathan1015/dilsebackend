@@ -21,7 +21,7 @@ return new class extends Migration
             $table->date('valid_from');
             $table->date('valid_until');
             $table->integer('usage_limit')->default(1);
-            $table->integer('used_count')->default(0);
+            $table->integer('used_count')->default(0); 
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

@@ -143,7 +143,11 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 Route::post('/store-order', [OrderController::class, 'store']);
 Route::post('/apply-discount', [CouponController::class, 'applyCoupon']);
-Route::post('apply-coupon', [CouponController::class, 'applyCoupon']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('apply-coupon', [CouponController::class, 'applyCoupon']);
+});
+
+
 
 Route::post('/appointments', [AppointmentController::class, 'storeAppointment']);
 

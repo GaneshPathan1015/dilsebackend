@@ -16,6 +16,11 @@ class CouponUsage extends Model
         'discount_amount',
     ];
 
+    protected $casts = [
+        'discount_amount' => 'decimal:2',
+    ];
+
+    // Relationships
     public function coupon()
     {
         return $this->belongsTo(Coupon::class);
@@ -24,5 +29,10 @@ class CouponUsage extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
     }
 }
