@@ -4,15 +4,21 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Order;
+use GuzzleHttp\Client;
 use Razorpay\Api\Api;
 use Srmklive\PayPal\Services\PayPal as PayPalClient;
-use App\Models\Order; // Import your Order Model
+use App\Services\OrderItemTaxService;
 use Exception;
+
 
 class PaymentController extends Controller
 {
+    public function __construct(
+        protected OrderItemTaxService $orderItemTaxService
+    ) {}
+
     // ==========================================
     // 1. RAZORPAY: Create Order (Step 1)
     // ==========================================
@@ -25,14 +31,14 @@ class PaymentController extends Controller
         // Amount must be in "Paise" (100 Paise = 1 Rupee)
         $orderData = [
             'receipt'         => 'rcpt_' . time(),
-            'amount'          => $request->total_amount * 100, 
+            'amount'          => $request->total_amount * 100,
             'currency'        => 'INR',
-            'payment_capture' => 1 
+            'payment_capture' => 1
         ];
 
         try {
             $razorpayOrder = $api->order->create($orderData);
-            
+
             // 3. Send the Order ID and Key back to React
             return response()->json([
                 'order_id' => $razorpayOrder['id'],
@@ -136,20 +142,20 @@ class PaymentController extends Controller
             // Determine name
             $userName = trim(
                 ($billing['first_name'] ?? $shipping['first_name'] ?? '') . ' ' .
-                ($billing['last_name'] ?? $shipping['last_name'] ?? '')
+                    ($billing['last_name'] ?? $shipping['last_name'] ?? '')
             );
 
-            $contactNumber = $shipping['phone'] 
-                ?? $billing['phone'] 
+            $contactNumber = $shipping['phone']
+                ?? $billing['phone']
                 ?? null;
             // -------------------------------------------
             // 5. Save Order in DB
             // -------------------------------------------
             $order = Order::create([
                 'order_id'         => 'ORD-' . Str::uuid(),
-                'user_id'          => Auth::id(), 
-                'user_name'        => $userName, 
-                'item_details'     => json_encode($payload, JSON_UNESCAPED_SLASHES),  
+                'user_id'          => Auth::id(),
+                'user_name'        => $userName,
+                'item_details'     => json_encode($payload, JSON_UNESCAPED_SLASHES),
                 'items_id'         => json_encode($itemsId, JSON_UNESCAPED_SLASHES),
 
                 'product_type'     => $productType,
@@ -167,6 +173,13 @@ class PaymentController extends Controller
                 'razorpay_order_id' => $request->razorpay_order_id,
             ]);
 
+            $this->orderItemTaxService->store(
+                $order,
+                $payload,
+                $request->billing_address ?? [],
+                $request->shipping_address ?? []
+            );
+
             // -------------------------------------------
             // 6. Return Success Response
             // -------------------------------------------
@@ -175,7 +188,6 @@ class PaymentController extends Controller
                 'message' => 'Payment verified & order saved',
                 'order_id' => $order->order_id
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -198,7 +210,7 @@ class PaymentController extends Controller
             "application_context" => [
                 // Where to send the user after they click "Pay" on PayPal
                 // This URL leads to your React "Success" page
-                "return_url" => env('FRONTEND_URL', 'http://localhost:5173') . "/payment/success", 
+                "return_url" => env('FRONTEND_URL', 'http://localhost:5173') . "/payment/success",
                 "cancel_url" => env('FRONTEND_URL', 'http://localhost:5173') . "/checkout",
             ],
             "purchase_units" => [
@@ -216,7 +228,7 @@ class PaymentController extends Controller
             foreach ($response['links'] as $link) {
                 if ($link['rel'] === 'approve') {
                     return response()->json([
-                        'approval_url' => $link['href'], 
+                        'approval_url' => $link['href'],
                         'order_id' => $response['id']
                     ]);
                 }
@@ -302,7 +314,7 @@ class PaymentController extends Controller
 
             $userName = trim(
                 ($billing['first_name'] ?? $shipping['first_name'] ?? '') . ' ' .
-                ($billing['last_name'] ?? $shipping['last_name'] ?? '')
+                    ($billing['last_name'] ?? $shipping['last_name'] ?? '')
             );
 
             $contactNumber = $shipping['phone'] ?? $billing['phone'] ?? null;
@@ -328,6 +340,13 @@ class PaymentController extends Controller
                 'paypal_order_id' => $request->token,
             ]);
 
+            $this->orderItemTaxService->store(
+                $order,
+                $payload,
+                $request->billing_address ?? [],
+                $request->shipping_address ?? []
+            );
+
             return response()->json([
                 'status' => 'success',
                 'message' => 'Payment verified & order saved',
@@ -345,11 +364,11 @@ class PaymentController extends Controller
     public function createCashfreeOrder(Request $request)
     {
         $client = new Client();
-        $baseUrl = env('CASHFREE_MODE') === 'sandbox' 
-            ? 'https://sandbox.cashfree.com/pg' 
+        $baseUrl = env('CASHFREE_MODE') === 'sandbox'
+            ? 'https://sandbox.cashfree.com/pg'
             : 'https://api.cashfree.com/pg';
 
-        $orderId = 'order_' . time(); 
+        $orderId = 'order_' . time();
         $returnUrl = env('FRONTEND_URL', 'http://localhost:5173') . "/payment/success?cf_order_id={order_id}";
 
         // FIX: Force amount to float to prevent "Invalid Amount" error
@@ -380,12 +399,11 @@ class PaymentController extends Controller
             ]);
 
             $body = json_decode($response->getBody(), true);
-            
+
             return response()->json([
                 'payment_session_id' => $body['payment_session_id'],
                 'order_id' => $orderId
             ]);
-
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -398,8 +416,8 @@ class PaymentController extends Controller
     public function verifyCashfreePayment(Request $request)
     {
         $client = new Client();
-        $baseUrl = env('CASHFREE_MODE') === 'sandbox' 
-            ? 'https://sandbox.cashfree.com/pg' 
+        $baseUrl = env('CASHFREE_MODE') === 'sandbox'
+            ? 'https://sandbox.cashfree.com/pg'
             : 'https://api.cashfree.com/pg';
 
         $orderId = $request->order_id;
@@ -418,7 +436,7 @@ class PaymentController extends Controller
             $orderData = json_decode($response->getBody(), true);
 
             if ($orderData['order_status'] === 'PAID') {
-                
+
                 // 2. LOGIC TO EXTRACT ITEM IDs (Fixed for Key Mismatches)
                 $payload = $request->items ?? [];
 
@@ -485,12 +503,12 @@ class PaymentController extends Controller
                     'order_id'         => 'ORD-' . Str::uuid(),
                     'user_id'          => $request->user()->id ?? null,
                     'user_name'        => $userName,
-                    
+
                     // Save the calculated arrays
                     'item_details'     => json_encode($payload, JSON_UNESCAPED_SLASHES),
                     'items_id'         => json_encode($itemsId, JSON_UNESCAPED_SLASHES),
                     'product_type'     => $productType,
-                    
+
                     'contact_number'   => $contactNumber,
                     'address'          => json_encode($shipping, JSON_UNESCAPED_SLASHES),
                     'billing_address'  => json_encode($billing, JSON_UNESCAPED_SLASHES),
@@ -503,6 +521,13 @@ class PaymentController extends Controller
                     'transaction_id'   => $orderId,
                 ]);
 
+                $this->orderItemTaxService->store(
+                    $order,
+                    $payload,
+                    $request->billing_address ?? [],
+                    $request->shipping_address ?? []
+                );
+
                 // 6. Clear Cart
                 /* if ($request->user()) {
                     \App\Models\Cart::where('user_id', $request->user()->id)->delete();
@@ -512,7 +537,6 @@ class PaymentController extends Controller
             } else {
                 return response()->json(['status' => 'failed', 'message' => 'Payment status: ' . $orderData['order_status']]);
             }
-
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
@@ -528,8 +552,8 @@ class PaymentController extends Controller
             $payload = $request->items ?? [];
 
             // Calculate Items ID
-            $itemsId = [ 'diamond' => [], 'gift' => [], 'build' => [], 'combo' => [] ];
-            
+            $itemsId = ['diamond' => [], 'gift' => [], 'build' => [], 'combo' => []];
+
             foreach ($payload as $item) {
                 $type = $item['productType'] ?? null;
                 switch ($type) {
@@ -580,25 +604,32 @@ class PaymentController extends Controller
                 'order_id'         => 'ORD-' . Str::uuid(),
                 'user_id'          => $request->user()->id ?? null,
                 'user_name'        => $userName,
-                
+
                 'item_details'     => json_encode($payload, JSON_UNESCAPED_SLASHES),
                 'items_id'         => json_encode($itemsId, JSON_UNESCAPED_SLASHES),
                 'product_type'     => $productType,
-                
+
                 'contact_number'   => $contactNumber,
                 'address'          => json_encode($shipping, JSON_UNESCAPED_SLASHES),
                 'billing_address'  => json_encode($billing, JSON_UNESCAPED_SLASHES),
                 'total_price'      => $request->total_amount,
-                
+
                 // COD SPECIFIC FIELDS
                 'payment_mode'     => 'cod',
                 'payment_method'   => 'cod',
                 'payment_status'   => 'pending', // Pending because money isn't received yet
-                
+
                 'coupon_code'      => $request->coupon_code,
                 'coupon_discount'  => $request->discount, // Frontend sends 'discount' or 'discount_amount'
                 'transaction_id'   => 'COD-' . strtoupper(Str::random(10)), // Generate a fake Transaction ID
             ]);
+
+            $this->orderItemTaxService->store(
+                $order,
+                $payload,
+                $request->billing_address ?? [],
+                $request->shipping_address ?? []
+            );
 
             // 3. Clear Cart
             if ($request->user()) {
@@ -606,7 +637,6 @@ class PaymentController extends Controller
             }
 
             return response()->json(['status' => 'success', 'message' => 'Order Placed Successfully']);
-
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }

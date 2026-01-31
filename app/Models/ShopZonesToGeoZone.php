@@ -12,7 +12,10 @@ class ShopZonesToGeoZone extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'country_id', 'zone_id', 'geo_zone_id', 
-        'created_by', 'updated_by'
+        'country_id',
+        'zone_id',
+        'geo_zone_id',
+        'created_by',
+        'updated_by'
     ];
 }
