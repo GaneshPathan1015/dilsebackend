@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,15 +9,15 @@ class Coupon extends Model
     use HasFactory;
 
     protected $fillable = [
-        'code', 
-        'type', 
-        'value', 
+        'code',
+        'type',
+        'value',
         'min_cart_value',
-        'max_discount', 
-        'valid_from', 
+        'max_discount',
+        'valid_from',
         'valid_until',
-        'usage_limit', 
-        'used_count', 
+        'usage_limit',
+        'used_count',
         'is_active'
     ];
 
@@ -28,19 +27,33 @@ class Coupon extends Model
         'is_active' => 'boolean'
     ];
 
-    // Check if coupon is valid
+    public function usages()
+    {
+        return $this->hasMany(CouponUsage::class);
+    }
+
+    // ✅ Basic coupon validity (global)
     public function isValid()
     {
         $now = now();
-        return $this->is_active && 
-               $now->between($this->valid_from, $this->valid_until) &&
-               $this->used_count < $this->usage_limit;
+
+        return $this->is_active
+            && $now->between($this->valid_from, $this->valid_until)
+            && $this->used_count < $this->usage_limit;
     }
 
-    // Calculate discount
+    // ✅ Check if user already used this coupon
+    public function isUsedByUser($userId)
+    {
+        return $this->usages()
+            ->where('user_id', $userId)
+            ->exists();
+    }
+
+    // ✅ Calculate discount amount
     public function calculateDiscount($cartTotal)
     {
-        if ($cartTotal < $this->min_cart_value) {
+        if ($this->min_cart_value && $cartTotal < $this->min_cart_value) {
             return 0;
         }
 
@@ -48,13 +61,73 @@ class Coupon extends Model
             return min($this->value, $cartTotal);
         }
 
-        // For percentage type
+        // percent
         $discount = ($cartTotal * $this->value) / 100;
-        
+
         if ($this->max_discount) {
-            return min($discount, $this->max_discount);
+            $discount = min($discount, $this->max_discount);
         }
 
         return $discount;
     }
 }
+
+
+// namespace App\Models;
+
+// use Illuminate\Database\Eloquent\Factories\HasFactory;
+// use Illuminate\Database\Eloquent\Model;
+
+// class Coupon extends Model
+// {
+//     use HasFactory;
+
+//     protected $fillable = [
+//         'code', 
+//         'type', 
+//         'value', 
+//         'min_cart_value',
+//         'max_discount', 
+//         'valid_from', 
+//         'valid_until',
+//         'usage_limit', 
+//         'used_count', 
+//         'is_active'
+//     ];
+
+//     protected $casts = [
+//         'valid_from' => 'datetime',
+//         'valid_until' => 'datetime',
+//         'is_active' => 'boolean'
+//     ];
+
+//     // Check if coupon is valid
+//     public function isValid()
+//     {
+//         $now = now();
+//         return $this->is_active && 
+//                $now->between($this->valid_from, $this->valid_until) &&
+//                $this->used_count < $this->usage_limit;
+//     }
+
+//     // Calculate discount
+//     public function calculateDiscount($cartTotal)
+//     {
+//         if ($cartTotal < $this->min_cart_value) {
+//             return 0;
+//         }
+
+//         if ($this->type === 'fixed') {
+//             return min($this->value, $cartTotal);
+//         }
+
+//         // For percentage type
+//         $discount = ($cartTotal * $this->value) / 100;
+        
+//         if ($this->max_discount) {
+//             return min($discount, $this->max_discount);
+//         }
+
+//         return $discount;
+//     }
+// }

@@ -44,8 +44,6 @@ class OrderController extends Controller
         if (!$order) {
             return response()->json(['message' => 'Order not found'], 404);
         }
-
-        // Calculate current quantities from items_id
         $currentQuantities = [
             'diamond' => 0,
             'jewelry' => 0,
@@ -67,7 +65,6 @@ class OrderController extends Controller
             }
         }
 
-        // If items_id se total 0 aaya hai, to old method use karen
         if ($currentQuantities['total'] === 0) {
             try {
                 $itemDetails = json_decode($order->item_details, true);
@@ -76,14 +73,12 @@ class OrderController extends Controller
                 foreach ($items as $item) {
                     $currentQuantities['total'] += $item['itemQuantity'] ?? 1;
 
-                    // Type-wise quantity bhi calculate karen
                     $productType = $item['productType'] ?? 'jewelry';
                     if (isset($currentQuantities[$productType])) {
                         $currentQuantities[$productType] += $item['itemQuantity'] ?? 1;
                     }
                 }
             } catch (\Exception $e) {
-                // Fallback: agar parse nahi ho paya to 1 consider karen
                 $currentQuantities['total'] = 1;
                 $currentQuantities['jewelry'] = 1;
             }
@@ -110,7 +105,6 @@ class OrderController extends Controller
             ], 404);
         }
 
-        // Validate cancellation reason
         $validator = Validator::make($request->all(), [
             'cancellation_reason' => 'required|string|min:10|max:500'
         ]);
@@ -135,17 +129,15 @@ class OrderController extends Controller
             if (!empty($order->coupon_code)) {
                 $coupon = \App\Models\Coupon::where('code', $order->coupon_code)->first();
                 if ($coupon && $coupon->used_count > 0) {
-                    \DB::transaction(function () use ($coupon) {
+                    DB::transaction(function () use ($coupon) {
                         $coupon->decrement('used_count');
                     });
                 }
             }
 
-            // Cancel the order
             $success = $order->cancel($request->cancellation_reason);
 
             if ($success) {
-                // Reload the order with fresh data
                 $order->refresh();
 
                 $response = [
@@ -154,7 +146,6 @@ class OrderController extends Controller
                     'order' => $order
                 ];
 
-                // Add refund information for online payments
                 if ($order->payment_mode !== 'cod') {
                     $response['refund_processed'] = true;
                     $response['message'] .= '. Refund has been initiated for your payment.';
@@ -168,7 +159,7 @@ class OrderController extends Controller
                 ], 500);
             }
         } catch (\Exception $e) {
-            \Log::error("Order cancellation failed: " . $e->getMessage());
+            Log::error("Order cancellation failed: " . $e->getMessage());
             return response()->json([
                 'status' => 'error',
                 'message' => 'Error cancelling order: ' . $e->getMessage()
@@ -176,7 +167,6 @@ class OrderController extends Controller
         }
     }
 
-    // Mark order as delivered (for admin use)
     public function markDelivered($id)
     {
         $userId = auth()->id();
@@ -206,7 +196,6 @@ class OrderController extends Controller
         }
     }
 
-    // Mark order as shipped (for admin use)
     public function markShipped($id)
     {
         $userId = auth()->id();
@@ -410,117 +399,107 @@ class OrderController extends Controller
     //     }
     // }
     public function store(Request $request)
-{
-    Log::info('🔄 ======= API ORDER CREATION STARTED =======');
-    Log::info('📝 Request Data:', $request->all());
+    {
+        Log::info('🔄 ======= API ORDER CREATION STARTED =======');
+        Log::info('📝 Request Data:', $request->all());
 
-    try {
-        // Step 1: Validate Request
-        $validator = Validator::make($request->all(), [
-            'user_id'        => 'required|exists:users,id',
-            'user_name'      => 'required|string|max:255',
-            'contact_number' => 'required|string|max:20',
-            'item_details'   => 'required|json',
-            'total_price'    => 'required|numeric|min:0',
-            'address'        => 'required|json',
-            'billing_address' => 'nullable|json',
-            'order_status'   => 'required|string|in:pending,processing,confirmed',
-            'payment_mode'   => 'required|string|in:cod,online,card,wallet',
-            'payment_status' => 'required|string|in:pending,paid,failed',
-            'transaction_id' => 'nullable|string',
-            'razorpay_payment_id' => 'nullable|string',
-            'razorpay_order_id' => 'nullable|string',
-            'is_gift'        => 'nullable|boolean',
-            'notes'          => 'nullable|string|max:500',
-            'coupon_discount' => 'nullable|numeric|min:0',
-            'coupon_code'    => 'nullable|string|max:50',
-            'product_type'   => 'required|string',
-            'total_quantity' => 'required|integer|min:1'
-        ]);
+        try {
+            // Step 1: Validate Request
+            $validator = Validator::make($request->all(), [
+                'user_id'        => 'required|exists:users,id',
+                'user_name'      => 'required|string|max:255',
+                'contact_number' => 'required|string|max:20',
+                'item_details'   => 'required|json',
+                'total_price'    => 'required|numeric|min:0',
+                'address'        => 'required|json',
+                'billing_address' => 'nullable|json',
+                'order_status'   => 'required|string|in:pending,processing,confirmed',
+                'payment_mode'   => 'required|string|in:cod,online,card,wallet',
+                'payment_status' => 'required|string|in:pending,paid,failed',
+                'transaction_id' => 'nullable|string',
+                'razorpay_payment_id' => 'nullable|string',
+                'razorpay_order_id' => 'nullable|string',
+                'is_gift'        => 'nullable|boolean',
+                'notes'          => 'nullable|string|max:500',
+                'coupon_discount' => 'nullable|numeric|min:0',
+                'coupon_code'    => 'nullable|string|max:50',
+                'product_type'   => 'required|string',
+                'total_quantity' => 'required|integer|min:1'
+            ]);
 
-        if ($validator->fails()) {
-            Log::error('❌ Validation failed:', $validator->errors()->toArray());
+            if ($validator->fails()) {
+                Log::error('❌ Validation failed:', $validator->errors()->toArray());
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $validated = $validator->validated();
+
+            // Generate unique Order ID
+            $validated['order_id'] = 'TCC' . date('YmdHis') . strtoupper(Str::random(4));
+
+            // Set default values
+            if (empty($validated['billing_address'])) {
+                $validated['billing_address'] = $validated['address'];
+            }
+
+            // Set items_id and quantities (can be empty arrays)
+            $validated['items_id'] = json_encode([]);
+            $validated['quantities'] = json_encode(['total' => $validated['total_quantity']]);
+
+            Log::info('✅ Validation passed, preparing order data...');
+            Log::info('📦 Order ID generated: ' . $validated['order_id']);
+
+            // ✅ CREATE ORDER
+            $order = Order::create($validated);
+
+            Log::info('🎉 Order created successfully in database: ' . $order->id);
+            Log::info('📊 Order Details:', [
+                'order_id' => $order->order_id,
+                'invoice_number' => $order->invoice_number,
+                'invoice_date' => $order->invoice_date,
+                'user_id' => $order->user_id,
+                'total_price' => $order->total_price,
+                'payment_mode' => $order->payment_mode
+            ]);
+
+            // ✅ OPTION 1: WITH QUEUE (Recommended for Mailtrap)
+            Log::info('📧 Dispatching email job to queue...');
+
+            // Import at top: use App\Jobs\ProcessOrderEmailsJob;
+            ProcessOrderEmailsJob::dispatch($order)
+                ->delay(now()->addSeconds(5))
+                ->onQueue('emails');
+
+            Log::info('✅ Email job dispatched to queue');
+            $emailStatus = 'queued';
+
+            Log::info('✅ ======= ORDER CREATION COMPLETED =======');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Order created successfully!',
+                'order_id' => $order->order_id,
+                'invoice_number' => $order->invoice_number,
+                'invoice_date' => $order->invoice_date,
+                'order' => $order,
+                'email_status' => $emailStatus,
+                'note' => $emailStatus === 'queued' ? 'Emails will be sent shortly via queue' : 'Emails sent immediately'
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('❌ ORDER CREATION FAILED: ' . $e->getMessage());
+            Log::error('🔍 Error Trace: ' . $e->getTraceAsString());
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Failed to create order',
+                'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
+            ], 500);
         }
-
-        $validated = $validator->validated();
-
-        // Generate unique Order ID
-        $validated['order_id'] = 'TCC' . date('YmdHis') . strtoupper(Str::random(4));
-
-        // Set default values
-        if (empty($validated['billing_address'])) {
-            $validated['billing_address'] = $validated['address'];
-        }
-
-        // Set items_id and quantities (can be empty arrays)
-        $validated['items_id'] = json_encode([]);
-        $validated['quantities'] = json_encode(['total' => $validated['total_quantity']]);
-
-        Log::info('✅ Validation passed, preparing order data...');
-        Log::info('📦 Order ID generated: ' . $validated['order_id']);
-
-        // ✅ CREATE ORDER
-        $order = Order::create($validated);
-
-        Log::info('🎉 Order created successfully in database: ' . $order->id);
-        Log::info('📊 Order Details:', [
-            'order_id' => $order->order_id,
-            'user_id' => $order->user_id,
-            'total_price' => $order->total_price,
-            'payment_mode' => $order->payment_mode
-        ]);
-
-        // ✅ OPTION 1: WITH QUEUE (Recommended for Mailtrap)
-        // Queue में email job dispatch करें
-        Log::info('📧 Dispatching email job to queue...');
-        
-        // Import at top: use App\Jobs\ProcessOrderEmailsJob;
-        ProcessOrderEmailsJob::dispatch($order)
-            ->delay(now()->addSeconds(5)) // 5 second delay for rate limiting
-            ->onQueue('emails');
-        
-        Log::info('✅ Email job dispatched to queue');
-        $emailStatus = 'queued';
-
-        /*
-        // ✅ OPTION 2: WITHOUT QUEUE (With Delay)
-        // सीधे email भेजें (queue के बिना)
-        Log::info('📧 Sending emails with delay for Mailtrap rate limit...');
-        
-        // 5 सेकंड wait करें rate limit के लिए
-        sleep(5);
-        
-        $emailResult = $this->sendOrderEmailsImmediately($order);
-        Log::info('📧 Email sending result: ' . ($emailResult ? 'SUCCESS' : 'FAILED'));
-        $emailStatus = $emailResult ? 'sent' : 'failed';
-        */
-
-        Log::info('✅ ======= ORDER CREATION COMPLETED =======');
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Order created successfully!',
-            'order_id' => $order->order_id,
-            'order' => $order,
-            'email_status' => $emailStatus,
-            'note' => $emailStatus === 'queued' ? 'Emails will be sent shortly via queue' : 'Emails sent immediately'
-        ], 201);
-    } catch (\Exception $e) {
-        Log::error('❌ ORDER CREATION FAILED: ' . $e->getMessage());
-        Log::error('🔍 Error Trace: ' . $e->getTraceAsString());
-
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Failed to create order',
-            'error' => env('APP_DEBUG') ? $e->getMessage() : 'Internal server error'
-        ], 500);
     }
-}
 
     private function sendOrderEmailsImmediately(Order $order)
     {
@@ -534,11 +513,6 @@ class OrderController extends Controller
             Log::info('👨‍💼 Admin Email: ' . $adminEmail);
 
             $emailSentCount = 0;
-
-            // Check Mailtrap rate limit (2 emails per 10 seconds)
-            // We'll send one email every 6 seconds to be safe
-
-            // Send admin email first
             if ($adminEmail) {
                 $adminSent = $this->sendSingleEmail(
                     $adminEmail,
@@ -582,6 +556,45 @@ class OrderController extends Controller
             Log::error('❌ Email sending failed: ' . $e->getMessage());
             Log::error('🔍 Email Error Trace: ' . $e->getTraceAsString());
             return false;
+        }
+    }
+
+    private function generateInvoiceNumber()
+    {
+        try {
+            $yearMonth = date('Y-m');
+            $currentMonth = date('Y-m');
+            $invoiceCount = Order::whereYear('created_at', date('Y'))
+                ->whereMonth('created_at', date('m'))
+                ->count();
+            $sequentialNumber = str_pad($invoiceCount + 1, 5, '0', STR_PAD_LEFT);
+
+            // Create invoice number
+            $invoiceNumber = "INV-{$yearMonth}-{$sequentialNumber}";
+
+            $counter = 1;
+            while (Order::where('invoice_number', $invoiceNumber)->exists()) {
+                $sequentialNumber = str_pad($invoiceCount + 1 + $counter, 5, '0', STR_PAD_LEFT);
+                $invoiceNumber = "INV-{$yearMonth}-{$sequentialNumber}";
+                $counter++;
+
+                // Safety break
+                if ($counter > 10) {
+                    $randomSuffix = strtoupper(Str::random(3));
+                    $invoiceNumber = "INV-{$yearMonth}-{$sequentialNumber}-{$randomSuffix}";
+                    break;
+                }
+            }
+
+            Log::info("Generated Invoice Number: {$invoiceNumber}");
+            return $invoiceNumber;
+        } catch (\Exception $e) {
+            Log::error('Error generating invoice number: ' . $e->getMessage());
+
+            // Fallback invoice number
+            $timestamp = time();
+            $random = strtoupper(Str::random(4));
+            return "INV-{$timestamp}-{$random}";
         }
     }
 

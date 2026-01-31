@@ -9,15 +9,15 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         :root {
-            --primary: #8B4513;
-            --primary-light: #A0522D;
-            --secondary: #CD853F;
-            --accent: #D2691E;
-            --gold: #D4AF37;
+            --primary: #0060ac;
+            --primary-light: #3a00ac;
+            --secondary: #3f3fcd;
+            --accent: #3f7ccd;
+            --gold: #3798d4;
             --silver: #C0C0C0;
             --diamond: #B9F2FF;
             --text-dark: #2C1810;
-            --text-light: #5D4037;
+            --text-light: #3d375d;
             --bg-cream: #FDF6E3;
             --bg-paper: #FFF8DC;
             --border: #DEB887;
@@ -242,6 +242,12 @@
             border-bottom: none;
         }
         
+        /* Currency symbol styling */
+        .currency {
+            font-family: 'Arial', sans-serif;
+            margin-right: 2px;
+        }
+        
         /* Summary Section */
         .summary-section {
             background: linear-gradient(135deg, #FFF8DC, #F5F5DC);
@@ -432,6 +438,25 @@
             background: rgba(205, 133, 63, 0.1) !important;
             border-left: 4px solid var(--accent);
         }
+
+        /* invoice.blade.php के style section में add करें */
+        .combo-part {
+            background: rgba(139, 69, 19, 0.05) !important;
+            border-left: 4px solid var(--accent) !important;
+        }
+
+        .combo-part td:first-child {
+            padding-left: 30px !important;
+            position: relative;
+        }
+
+        .combo-part td:first-child::before {
+            content: "→";
+            position: absolute;
+            left: 10px;
+            color: var(--accent);
+            font-weight: bold;
+        }
         
         /* Desktop Styles */
         @media (min-width: 992px) {
@@ -557,7 +582,7 @@
                             <i class="fas fa-gem"></i>
                         </div>
                         <div class="brand-text">
-                            <h1>The Carat Casa</h1>
+                            <h1>DILSE</h1>
                             <p>Luxury Diamonds & Fine Jewelry</p>
                         </div>
                     </div>
@@ -571,29 +596,11 @@
             <div class="invoice-body">
                 <div class="info-sections">
                     <div class="info-card">
-                        <h3><i class="fas fa-user-circle"></i> Customer Information</h3>
-                        <p><strong>Name:</strong> {{ $order->user_name ?? 'N/A' }}</p>
-                        <p><strong>Email:</strong> {{ $order->user->email ?? ($order->address['email'] ?? 'N/A') }}</p>
-                        <p><strong>Contact:</strong> {{ $order->contact_number ?? 'N/A' }}</p>
-                        <p><strong>Total Items:</strong> {{ $order->total_quantity ?? (isset($processedItems) ? count($processedItems) : 0) }}</p>
-                    </div>
-                    
-                    <div class="info-card">
-                        <h3><i class="fas fa-info-circle"></i> Order Information</h3>
-                        <p><strong>Status:</strong> 
-                            <span class="badge bg-{{ 
-                                $order->order_status === 'pending' ? 'secondary' : 
-                                ($order->order_status === 'confirmed' ? 'primary' : 
-                                ($order->order_status === 'shipped' ? 'info' : 
-                                ($order->order_status === 'delivered' ? 'success' : 
-                                ($order->order_status === 'returned' ? 'warning' : 'danger'))))
-                            }}">
-                                {{ ucfirst($order->order_status ?? 'N/A') }}
-                            </span>
-                        </p>
-                        <p><strong>Payment Method:</strong> {{ ucfirst($order->payment_mode ?? 'N/A') }}</p>
-                        <p><strong>Payment Status:</strong> {{ ucfirst($order->payment_status ?? 'N/A') }}</p>
-                        <p><strong>Order Date:</strong> {{ $order->created_at->format('M d, Y') ?? 'N/A' }}</p>
+                        <h3><i class="fas fa-file-invoice"></i> Invoice Information</h3>
+                        <p><strong>Invoice Number:</strong> {{ $order->invoice_number ?? 'Not Generated' }}</p>
+                        <p><strong>Invoice Date:</strong> {{ $order->invoice_date ? $order->invoice_date->format('F d, Y') : 'Not Set' }}</p>
+                        <p><strong>Order ID:</strong> {{ $order->order_id ?? 'N/A' }}</p>
+                        <p><strong>Order Date:</strong> {{ $order->created_at->format('F d, Y, h:i A') }}</p>
                     </div>
                 </div>
 
@@ -616,59 +623,93 @@
                                     <th>Details</th>
                                     <th>Qty</th>
                                     <th>Unit Price</th>
+                                    <th>Tax</th>
                                     <th>Total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($processedItems as $item)
-                                <tr class="{{ $item['type'] ?? 'unknown' }}-row">
+                                <tr class="{{ $item['type'] ?? 'unknown' }}-row {{ $item['is_combo_part'] ?? false ? 'combo-part' : '' }}">
                                     <td>
                                         <strong>{{ $item['name'] ?? 'Product' }}</strong>
                                         <div style="font-size: 12px; color: var(--text-light); margin-top: 5px;">
                                             <i class="fas fa-{{ ($item['type'] ?? 'jewelry') === 'diamond' ? 'gem' : (($item['type'] ?? 'jewelry') === 'jewelry' ? 'ring' : 'box') }}"></i>
                                             {{ ucfirst($item['type'] ?? 'jewelry') }}
+                                            @if(isset($item['is_combo_part']) && $item['is_combo_part'])
+                                                <br><small><i class="fas fa-link"></i> Combo Package</small>
+                                                @if(isset($item['combo_size']))
+                                                <br><small>Size: {{ $item['combo_size'] }}</small>
+                                                @endif
+                                            @endif
+                                            @if(isset($item['sku']))
+                                            <br><small>SKU: {{ $item['sku'] }}</small>
+                                            @endif
                                         </div>
                                     </td>
                                     <td>
                                         @if(($item['type'] ?? '') === 'diamond')
-                                            <div><strong>Certificate Number:</strong> {{ $item['certificate_number'] ?? 'N/A' }}</div>
-                                            
-                                            @if(isset($item['color']) && $item['color'] !== 'N/A')
+                                            <!-- Diamond details -->
+                                            <div><strong>Certificate:</strong> {{ $item['certificate_number'] ?? 'N/A' }}</div>
+                                            @if(isset($item['carat_weight']) && $item['carat_weight'] > 0)
+                                            <div><strong>Carat:</strong> {{ $item['carat_weight'] }}ct</div>
+                                            @endif
+                                            @if(isset($item['color']))
                                             <div><strong>Color:</strong> {{ $item['color'] }}</div>
                                             @endif
-                                            @if(isset($item['clarity']) && $item['clarity'] !== 'N/A')
+                                            @if(isset($item['clarity']))
                                             <div><strong>Clarity:</strong> {{ $item['clarity'] }}</div>
                                             @endif
-                                            @if(isset($item['shape']) && $item['shape'] !== 'N/A')
+                                            @if(isset($item['shape']))
                                             <div><strong>Shape:</strong> {{ $item['shape'] }}</div>
                                             @endif
-                                        @elseif(($item['type'] ?? '') === 'jewelry')
-                                            @if(isset($item['metal_color']) && $item['metal_color'] !== 'N/A')
+                                            @if(isset($item['diamond_type_label']))
+                                            <div><strong>Type:</strong> {{ $item['diamond_type_label'] }}</div>
+                                            @endif
+                                            @if(isset($item['measurements']))
+                                            <div><strong>Measurements:</strong> {{ $item['measurements'] }}</div>
+                                            @endif
+                                            
+                                        @elseif(($item['type'] ?? '') === 'jewelry' || ($item['type'] ?? '') === 'gift')
+                                            <!-- Show metal, shape, weight details -->
+                                            @if(isset($item['metal_color']))
                                             <div><strong>Metal:</strong> {{ $item['metal_color'] }}</div>
                                             @endif
-                                            @if(isset($item['metal_type']) && $item['metal_type'] !== 'N/A')
-                                            <div><strong>Type:</strong> {{ $item['metal_type'] }}</div>
+                                            @if(isset($item['shape']))
+                                            <div><strong>Shape:</strong> {{ $item['shape'] }}</div>
                                             @endif
-                                            @if(isset($item['size']) && $item['size'] !== 'N/A')
-                                            <div><strong>Size:</strong> {{ $item['size'] }}</div>
+                                            @if(isset($item['weight']))
+                                            <div><strong>Weight:</strong> {{ $item['weight'] }}g</div>
                                             @endif
-                                            @if(isset($item['metal_purity']) && $item['metal_purity'] !== 'N/A')
-                                            <div><strong>Purity:</strong> {{ $item['metal_purity'] }}</div>
+                                            @if(isset($item['diamond_weight']) && $item['diamond_weight'] > 0)
+                                            <div><strong>Diamond Weight:</strong> {{ $item['diamond_weight'] }}ct</div>
                                             @endif
-                                        @else
-                                            <div>Combo Package</div>
-                                            @if(isset($item['size']) && $item['size'] !== 'N/A')
-                                            <div><strong>Size:</strong> {{ $item['size'] }}</div>
+                                            @if(isset($item['diamond_quality']))
+                                            <div><strong>Diamond Quality:</strong> {{ $item['diamond_quality'] }}</div>
                                             @endif
-                                            @if(isset($item['ring_price']) && isset($item['diamond_price']))
-                                            <div><strong>Ring:</strong> ${{ number_format($item['ring_price'], 2) }}</div>
-                                            <div><strong>Diamond:</strong> ${{ number_format($item['diamond_price'], 2) }}</div>
+                                            @if(isset($item['category']))
+                                            <div><strong>Category:</strong> {{ $item['category'] }}</div>
                                             @endif
+                                            {{-- @if(isset($item['selected_plan']))
+                                            <div><strong>Warranty:</strong> {{ $item['warranty_info']['duration'] ?? $item['selected_plan'] }}</div>
+                                            @endif --}}
                                         @endif
                                     </td>
                                     <td>{{ $item['quantity'] ?? 1 }}</td>
-                                    <td>${{ number_format($item['price'] ?? 0, 2) }}</td>
-                                    <td><strong>${{ number_format(($item['price'] ?? 0) * ($item['quantity'] ?? 1), 2) }}</strong></td>
+                                    <td><span class="currency">₹</span>{{ number_format($item['price'] ?? 0, 2) }}</td>
+                                    <td>
+                                        <!-- Tax for this item -->
+                                        @if(isset($item['tax_details']['total_gst_amount']) && $item['tax_details']['total_gst_amount'] > 0)
+                                        <div style="font-size: 12px;">
+                                            GST: <span class="currency">₹</span>{{ number_format($item['tax_details']['total_gst_amount'] ?? 0, 2) }}
+                                            @if(isset($item['tax_details']['making_charges']) && $item['tax_details']['making_charges'] > 0)
+                                            <br><small>Making: <span class="currency">₹</span>{{ number_format($item['tax_details']['making_charges'], 2) }}</small>
+                                            @endif
+                                        </div>
+                                        @else
+                                        <span class="currency">₹</span>0.00
+                                        @endif
+                                    </td>
+                                    <td><strong><span class="currency">₹</span>{{ number_format($item['price_with_tax'] ?? (($item['price'] ?? 0) * ($item['quantity'] ?? 1)), 2) }}</strong></td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -691,36 +732,92 @@
                 
                 <div class="summary-section">
                     <div class="summary-row">
-                        <span>Total Quantity:</span>
-                        <span>{{ $order->total_quantity ?? $itemsCount }} items</span>
+                        <span>Subtotal (Without Tax):</span>
+                        <span><span class="currency">₹</span>{{ number_format($taxSummary['total_price_without_tax'] ?? ($order->total_price - ($taxDetails['total_gst_amount'] ?? 0)), 2) }}</span>
                     </div>
+                    
                     <div class="summary-row">
-                        <span>Subtotal:</span>
-                        <span>${{ number_format($order->total_price ?? 0, 2) }}</span>
+                        <span>Total Tax:</span>
+                        <span><span class="currency">₹</span>{{ number_format($taxDetails['total_gst_amount'] ?? 0, 2) }}</span>
                     </div>
+                    
                     @if($order->coupon_code ?? false)
                         <div class="summary-row">
                             <span>Coupon Code ({{ $order->coupon_code }}):</span>
-                            <span class="text-danger">-${{ number_format($order->coupon_discount ?? 0, 2) }}</span>
+                            <span class="text-danger">-<span class="currency">₹</span>{{ number_format($order->coupon_discount ?? 0, 2) }}</span>
                         </div>
                     @endif
+                    
                     <div class="summary-row">
                         <span>Shipping:</span>
-                        <span>${{ number_format($order->shipping_cost ?? 0, 2) }}</span>
+                        <span><span class="currency">₹</span>{{ number_format($order->shipping_cost ?? 0, 2) }}</span>
                     </div>
-                    <div class="summary-row">
+                    
+                    {{-- <div class="summary-row">
                         <span>Discount:</span>
-                        <span class="text-danger">-${{ number_format($order->discount ?? 0, 2) }}</span>
-                    </div>
+                        <span class="text-danger">-<span class="currency">₹</span>{{ number_format($order->discount ?? 0, 2) }}</span>
+                    </div> --}}
+                    
                     <div class="summary-row grand-total">
                         <span>Grand Total:</span>
-                        <span>${{ number_format(($order->total_price ?? 0) + ($order->shipping_cost ?? 0) - ($order->discount ?? 0), 2) }}</span>
+                        <span><span class="currency">₹</span>{{ number_format($order->total_price ?? 0, 2) }}</span>
                     </div>
+                </div>
+
+                <!-- Tax Breakdown Section -->
+                <div class="summary-section" style="margin-top: 20px;">
+                    <div class="section-header">
+                        <i class="fas fa-receipt"></i>
+                        <span>Tax Breakdown</span>
+                    </div>
+                    
+                    <div class="summary-row">
+                        <span>Price Without Tax:</span>
+                        <span><span class="currency">₹</span>{{ number_format($taxSummary['total_price_without_tax'] ?? ($order->total_price - ($taxDetails['total_gst_amount'] ?? 0)), 2) }}</span>
+                    </div>
+                    
+                    @if(($taxDetails['gold_gst_amount'] ?? 0) > 0)
+                    <div class="summary-row">
+                        <span>Gold GST (3.00%):</span>
+                        <span><span class="currency">₹</span>{{ number_format($taxDetails['gold_gst_amount'] ?? 0, 2) }}</span>
+                    </div>
+                    @endif
+                    
+                    @if(($taxDetails['diamond_gst_amount'] ?? 0) > 0)
+                    <div class="summary-row">
+                        <span>Diamond GST (0.25%):</span>
+                        <span><span class="currency">₹</span>{{ number_format($taxDetails['diamond_gst_amount'] ?? 0, 2) }}</span>
+                    </div>
+                    @endif
+                    
+                    @if(($taxDetails['making_gst_amount'] ?? 0) > 0)
+                    <div class="summary-row">
+                        <span>Making Charges GST (3.00%):</span>
+                        <span><span class="currency">₹</span>{{ number_format($taxDetails['making_gst_amount'] ?? 0, 2) }}</span>
+                    </div>
+                    @endif
+                    
+                    <div class="summary-row" style="font-weight: bold; border-top: 2px solid var(--border);">
+                        <span>Total Tax:</span>
+                        <span><span class="currency">₹</span>{{ number_format($taxDetails['total_gst_amount'] ?? 0, 2) }}</span>
+                    </div>
+                    
+                    {{-- @if(isset($taxDetails['gst_breakdown']) && count($taxDetails['gst_breakdown']) > 0)
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(255,248,220,0.5); border-radius: 8px; font-size: 13px;">
+                        <strong>Tax Calculation:</strong>
+                        @foreach($taxDetails['gst_breakdown'] as $tax)
+                            <div style="margin-top: 5px;">
+                                {{ $tax['formatted'] ?? $tax['name'] ?? '' }}: 
+                                <span class="currency">₹</span>{{ number_format($tax['gst_amount'] ?? 0, 2) }}
+                            </div>
+                        @endforeach
+                    </div>
+                    @endif --}}
                 </div>
             </div>
             
             <div class="invoice-footer">
-                <p>Thank you for choosing The Carat Casa for your luxury jewelry needs. We appreciate your business! © {{ date('Y') }} | <a href="https://thecaratcasa.com/">www.thecaratcasa.com</a></p>
+                <p>Thank you for choosing DILSE for your luxury jewelry needs. We appreciate your business! © {{ date('Y') }} | <a href="https://dilse.com/">www.dilse.com</a></p>
             </div>
         </div>
         

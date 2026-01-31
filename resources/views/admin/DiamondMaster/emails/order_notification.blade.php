@@ -3,24 +3,25 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>New Order Received - The Carat Casa</title>
+    <title>New Order Received - DILSE</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 700px; margin: 0 auto; background: #fff; }
-        .header { background: #dc3545; color: white; padding: 25px; text-align: center; }
+        .header { background: #8B4513; color: white; padding: 25px; text-align: center; }
         .alert { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px; border-radius: 5px; }
         .content { padding: 30px; }
         .order-details { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 20px 0; }
         .customer-info { background: #e7f3ff; padding: 20px; border-radius: 10px; margin: 20px 0; }
         .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        .items-table th { background: #343a40; color: white; padding: 12px; text-align: left; }
+        .items-table th { background: #8B4513; color: white; padding: 12px; text-align: left; }
         .items-table td { padding: 12px; border-bottom: 1px solid #dee2e6; }
         .items-table tr:nth-child(even) { background: #f8f9fa; }
         .total-section { background: #e9ecef; padding: 20px; border-radius: 10px; margin-top: 20px; }
-        .footer { background: #343a40; color: white; padding: 20px; text-align: center; }
-        .button { display: inline-block; background: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; }
-        .highlight { color: #dc3545; font-weight: bold; }
+        .footer { background: #8B4513; color: white; padding: 20px; text-align: center; }
+        .button { display: inline-block; background: #8B4513; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; }
+        .highlight { color: #8B4513; font-weight: bold; }
+        .currency { font-family: 'Arial', sans-serif; margin-right: 2px; }
         @media (max-width: 600px) { .container { width: 100%; } }
     </style>
 </head>
@@ -39,6 +40,15 @@
 
         <!-- Content -->
         <div class="content">
+            <!-- Invoice Info -->
+            <div style="background: #d4edda; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <p style="margin: 0;"><strong>📄 Invoice Details:</strong></p>
+                <p style="margin: 5px 0 0 0;">
+                    <strong>Invoice Number:</strong> {{ $order->invoice_number ?? 'To be generated' }} |
+                    <strong>Invoice Date:</strong> {{ $order->invoice_date ? $order->invoice_date->format('d/m/Y') : 'Pending' }}
+                </p>
+            </div>
+
             <!-- Customer Info -->
             <div class="customer-info">
                 <h3>👤 Customer Information</h3>
@@ -82,8 +92,8 @@
                     <tr>
                         <td>{{ $item['name'] ?? $item['title'] ?? 'Product' }}</td>
                         <td>{{ $item['quantity'] ?? 1 }}</td>
-                        <td>₹{{ number_format($item['price'] ?? 0, 2) }}</td>
-                        <td>₹{{ number_format(($item['price'] ?? 0) * ($item['quantity'] ?? 1), 2) }}</td>
+                        <td><span class="currency">₹</span>{{ number_format($item['price'] ?? 0, 2) }}</td>
+                        <td><span class="currency">₹</span>{{ number_format(($item['price'] ?? 0) * ($item['quantity'] ?? 1), 2) }}</td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -92,17 +102,17 @@
 
             <!-- Totals -->
             <div class="total-section">
-                <p><strong>Subtotal:</strong> ₹{{ $total_amount }}</p>
+                <p><strong>Subtotal:</strong> <span class="currency">₹</span>{{ number_format($total_amount, 2) }}</p>
 
                 @if(isset($coupon_discount) && $coupon_discount > 0)
                 <p>
-                    <strong>Coupon Discount:</strong> -₹{{ number_format($coupon_discount, 2) }}
+                    <strong>Coupon Discount:</strong> -<span class="currency">₹</span>{{ number_format($coupon_discount, 2) }}
                     (Code: {{ $coupon_code ?? 'N/A' }})
                 </p>
                 @endif
 
                 @if($order->shipping_cost > 0)
-                <p><strong>Shipping:</strong> ₹{{ number_format($order->shipping_cost, 2) }}</p>
+                <p><strong>Shipping:</strong> <span class="currency">₹</span>{{ number_format($order->shipping_cost, 2) }}</p>
                 @endif
 
                 @php
@@ -115,8 +125,8 @@
                     }
                 @endphp
 
-                <p style="font-size: 18px; font-weight: bold; color: #dc3545;">
-                    <strong>Grand Total:</strong> ₹{{ number_format($grandTotal, 2) }}
+                <p style="font-size: 18px; font-weight: bold; color: #8B4513;">
+                    <strong>Grand Total:</strong> <span class="currency">₹</span>{{ number_format($grandTotal, 2) }}
                 </p>
             </div>
 
@@ -134,6 +144,15 @@
             </div>
             @endif
 
+            <!-- Invoice Attachment Note -->
+            <div style="background: #d1ecf1; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>📎 Invoice Attachment:</strong></p>
+                <p style="margin: 5px 0 0 0;">
+                    The detailed invoice PDF is attached to this email. 
+                    You can also download it from the admin panel.
+                </p>
+            </div>
+
             <!-- Action Button -->
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{{ url('/admin/orders') }}" class="button">
@@ -148,7 +167,7 @@
 
         <!-- Footer -->
         <div class="footer">
-            <p>© {{ date('Y') }} The Carat Casa Admin System</p>
+            <p>© {{ date('Y') }} DILSE Admin System</p>
             <p>Order Received At: {{ now()->format('Y-m-d H:i:s') }}</p>
         </div>
     </div>

@@ -77,7 +77,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'user_type',
         'title',
-        'dob',                
+        'dob',
         'anniversary_date',
         'image',
     ];
@@ -101,7 +101,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_verified_at' => 'datetime',
         'dob' => 'date:Y-m-d',
         'anniversary_date' => 'date:Y-m-d',
-    ]; 
+    ];
+
+    public function couponUsages()
+    {
+        return $this->hasMany(\App\Models\CouponUsage::class);
+    }
+
 
     public function addresses()
     {
@@ -116,11 +122,11 @@ class User extends Authenticatable implements MustVerifyEmail
         if (!$this->image) {
             return null;
         }
-        
+
         if (str_starts_with($this->image, 'http')) {
             return $this->image;
         }
-        
+
         // For images stored in storage
         return asset('storage/' . $this->image);
     }

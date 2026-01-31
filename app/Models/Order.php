@@ -8,15 +8,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
 
-
 class Order extends Model
 {
     protected $fillable = [
         'order_id',
+        'invoice_number',    // ✅ ADD THIS
+        'invoice_date',      // ✅ ADD THIS
         'user_id',
         'user_name',
         'contact_number',
-
         'items_id',
         'item_details',
         'total_price',
@@ -27,17 +27,14 @@ class Order extends Model
         'coupon_discount',
         'address',
         'billing_address',
-
         'payment_mode',
         'transaction_id',
         'razorpay_payment_id',
         'razorpay_order_id',
         'payment_status',
         'order_status',
-
         'paypal_order_id',
         'payer_email',
-
         'delivery_date',
         'cancelled_at',
         'cancellation_reason',
@@ -45,6 +42,7 @@ class Order extends Model
     ];
 
     protected $casts = [
+        'invoice_date' => 'datetime',    // ✅ ADD THIS
         'items_id' => 'array',
         'item_details' => 'array',
         'address' => 'array',
@@ -53,6 +51,7 @@ class Order extends Model
         'cancelled_at' => 'datetime',
         'discount' => 'float',
         'coupon_discount' => 'float',
+        'delivery_date' => 'datetime',   // ✅ ADD THIS if not present
     ];
 
     protected $appends = [
@@ -68,11 +67,24 @@ class Order extends Model
         'formatted_delivery_date',
         'formatted_cancelled_date',
         'coupon_details',
+        'formatted_invoice_date',  // ✅ ADD THIS
     ];
 
     protected static function boot()
     {
         parent::boot();
+
+        // ✅ Invoice number auto-generation on creating
+        static::creating(function ($order) {
+            if (empty($order->invoice_number)) {
+                $order->invoice_number = self::generateInvoiceNumber();
+            }
+            
+            if (empty($order->invoice_date)) {
+                $order->invoice_date = now();
+            }
+        });
+
         static::created(function ($order) {
             if (!empty($order->coupon_code)) {
                 $coupon = Coupon::where('code', $order->coupon_code)->first();
@@ -103,6 +115,125 @@ class Order extends Model
             }
         });
     }
+
+    // ✅ Static method to generate invoice number
+    public static function generateInvoiceNumber()
+    {
+        try {
+            // Get current year and month
+            $yearMonth = date('Y-m');
+            
+            // Get count of invoices in current month to create sequential number
+            $currentMonth = date('Y-m');
+            $invoiceCount = self::whereYear('created_at', date('Y'))
+                              ->whereMonth('created_at', date('m'))
+                              ->whereNotNull('invoice_number')
+                              ->count();
+            
+            // Generate sequential number with leading zeros
+            $sequentialNumber = str_pad($invoiceCount + 1, 5, '0', STR_PAD_LEFT);
+            
+            // Create invoice number
+            $invoiceNumber = "TCC-INV-{$yearMonth}-{$sequentialNumber}";
+            
+            // Check if invoice number already exists
+            $counter = 1;
+            while (self::where('invoice_number', $invoiceNumber)->exists()) {
+                $sequentialNumber = str_pad($invoiceCount + 1 + $counter, 5, '0', STR_PAD_LEFT);
+                $invoiceNumber = "TCC-INV-{$yearMonth}-{$sequentialNumber}";
+                $counter++;
+                
+                if ($counter > 10) {
+                    $randomSuffix = strtoupper(\Illuminate\Support\Str::random(3));
+                    $invoiceNumber = "TCC-INV-{$yearMonth}-{$sequentialNumber}-{$randomSuffix}";
+                    break;
+                }
+            }
+            
+            Log::info("Generated Invoice Number: {$invoiceNumber}");
+            return $invoiceNumber;
+            
+        } catch (\Exception $e) {
+            Log::error('Error generating invoice number: ' . $e->getMessage());
+            
+            // Fallback invoice number
+            $timestamp = time();
+            $random = strtoupper(\Illuminate\Support\Str::random(4));
+            return "TCC-INV-{$timestamp}-{$random}";
+        }
+    }
+
+    // ✅ Accessor for formatted invoice date
+    public function getFormattedInvoiceDateAttribute(): ?string
+    {
+        return $this->invoice_date
+            ? $this->invoice_date->format('F d, Y')
+            : null;
+    }
+
+
+    // protected static function boot()
+    // {
+    //     parent::boot();
+    //     static::created(function ($order) {
+    //         if (!empty($order->coupon_code)) {
+    //             $coupon = Coupon::where('code', $order->coupon_code)->first();
+    //             if ($coupon) {
+    //                 DB::transaction(function () use ($coupon) {
+    //                     $coupon->refresh();
+    //                     if ($coupon->used_count < $coupon->usage_limit) {
+    //                         $coupon->increment('used_count');
+    //                         Log::info("Coupon count incremented: {$coupon->code}, New count: {$coupon->used_count}");
+    //                     }
+    //                 });
+    //             }
+    //         }
+    //     });
+
+    //     static::updated(function ($order) {
+    //         // Check if order status changed to cancelled
+    //         if ($order->isDirty('order_status') && $order->order_status === 'cancelled') {
+    //             if (!empty($order->coupon_code)) {
+    //                 $coupon = Coupon::where('code', $order->coupon_code)->first();
+    //                 if ($coupon && $coupon->used_count > 0) {
+    //                     DB::transaction(function () use ($coupon) {
+    //                         $coupon->decrement('used_count');
+    //                         Log::info("Coupon count decremented (order cancelled): {$coupon->code}, New count: {$coupon->used_count}");
+    //                     });
+    //                 }
+    //             }
+    //         }
+    //     });
+    // }
+
+    // // Cancel order method
+    // public function cancel($reason = null)
+    // {
+    //     if ($this->canBeCancelled()) {
+    //         $updateData = [
+    //             'order_status' => 'cancelled',
+    //             'cancelled_at' => now(),
+    //             'cancellation_reason' => $reason,
+    //             'updated_at' => now()
+    //         ];
+
+    //         // Set payment status based on payment mode
+    //         if ($this->payment_mode === 'cod') {
+    //             $updateData['payment_status'] = 'cancelled';
+    //         } else {
+    //             // For online payments, process refund and set status to refunded
+    //             $updateData['payment_status'] = 'refunded';
+    //             $this->processRefund();
+    //         }
+
+    //         $this->update($updateData);
+
+    //         return true;
+    //     }
+
+    //     return false;
+    // }
+
 
     // Cancel order method
     public function cancel($reason = null)
